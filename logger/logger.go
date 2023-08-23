@@ -15,7 +15,7 @@ import (
 	"go.uber.org/zap/zapcore"
 	"go.uber.org/zap/zaptest/observer"
 
-	"github.com/rkvst/go-avidcommon/correlationid"
+	"github.com/rkvst/go-rkvstcommon/correlationid"
 )
 
 var (

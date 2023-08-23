@@ -11,7 +11,7 @@ env_build: &env_build
 
   # The GOCACHE in a linux container on Docker for windows MUST be on a linuxy
   # file system
-  GOCACHE: /tmp/jitsuin/go-avidcommon
+  GOCACHE: /tmp/jitsuin/go-rkvstcommon
 
 vars:
 
@@ -34,11 +34,11 @@ tasks:
     cmds:
       - |
         golangci-lint --version
-        go vet .
+        go vet ./...
         goimports {{.VERBOSE}} -w .
-        golangci-lint {{.VERBOSE}} run --timeout 10m $d
+        golangci-lint {{.VERBOSE}} run --timeout 10m ./...
 
   unit-tests:
     desc: "run unit tests"
     cmds:
-      - go test {{.GO_TEST_TAGS}} .
+      - go test {{.GO_TEST_TAGS}} ./...

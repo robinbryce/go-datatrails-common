@@ -18,21 +18,23 @@ version: '3'
 includes:
   codeqa:
     taskfile: ./taskfiles/Taskfile_codeqa.yml
-    dir: ./taskfiles
 
 tasks:
+
+  qa-basic:
+    desc: |
+      format the source and run all the quality checks
+      (Does not run unit tests)
+    cmds:
+      - task: codeqa:format
+      - task: codeqa:lint
+
   build:
-    dir: ./go-avidcommon
     desc: ensure go build works for all packages
     cmds:
-      - |
-        for gomod in $(find . -type f -name go.mod); do
-          go build -v $(dirname $gomod)/...
-        done
+      - go build -v ./...
 
   test:
     desc: run the tests
     cmds:
-      - task: codeqa:format
-      - task: codeqa:lint
       - task: codeqa:unit-tests

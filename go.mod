@@ -1,8 +1,8 @@
-module github.com/rkvst/go-avidcommon
+module github.com/rkvst/go-rkvstcommon
 
 go 1.21
 
-replace github.com/rkvst/go-avidcommon => ./
+replace github.com/rkvst/go-rkvstcommon => ./
 
 require (
 	github.com/KimMachineGun/automemlimit v0.2.6

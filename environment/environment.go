@@ -7,7 +7,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/rkvst/go-avidcommon/logger"
+	"github.com/rkvst/go-rkvstcommon/logger"
 )
 
 const (
