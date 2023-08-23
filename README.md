@@ -1,1 +1,1 @@
-# avidcommon
+# go-avidcommon
