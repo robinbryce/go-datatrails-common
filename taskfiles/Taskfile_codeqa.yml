@@ -11,7 +11,7 @@ env_build: &env_build
 
   # The GOCACHE in a linux container on Docker for windows MUST be on a linuxy
   # file system
-  GOCACHE: /tmp/jitsuin/avidcommon
+  GOCACHE: /tmp/jitsuin/go-avidcommon
 
 vars:
 
@@ -26,34 +26,19 @@ tasks:
   format:
     desc: Quality assurance of code
     summary: "format sources (go fmt)"
-    dir: ../go-avidcommon
     cmds:
-      - |
-        for gomod in $(find . -type f -name go.mod); do
-          echo "gofmt $(dirname $gomod)"
-          gofmt -l -s -w $(dirname $gomod)
-        done
+      - gofmt -l -s -w .
 
   lint:
-    dir: ../go-avidcommon
     desc: Quality assurance of code
     cmds:
-      - pwd
       - |
         golangci-lint --version
-        for gomod in $(find . -type f -name go.mod); do
-          echo "go vet, goimports, golangci-lint for $(dirname $gomod)"
-          d=$(dirname $gomod)
-          go vet $d
-          goimports {{.VERBOSE}} -w $d
-          golangci-lint {{.VERBOSE}} run --timeout 10m $d
-        done
+        go vet .
+        goimports {{.VERBOSE}} -w .
+        golangci-lint {{.VERBOSE}} run --timeout 10m $d
 
   unit-tests:
-    dir: ../go-avidcommon
     desc: "run unit tests"
     cmds:
-      - |
-        for gomod in $(find . -type f -name go.mod); do
-          go test {{.GO_TEST_TAGS}} $(dirname $gomod)
-        done
+      - go test {{.GO_TEST_TAGS}} .
