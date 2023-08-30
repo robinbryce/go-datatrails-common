@@ -144,6 +144,7 @@ func (s *Sender) SendMsg(ctx context.Context, message OutMessage, opts ...OutMes
 	if message.ApplicationProperties == nil {
 		message.ApplicationProperties = make(map[string]any)
 	}
+	opts = AddCorrelationIDOption(ctx, opts...)
 	for _, opt := range opts {
 		opt(&message)
 	}
