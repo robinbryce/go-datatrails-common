@@ -2,6 +2,7 @@ package azbus
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"sync"
 	"time"
@@ -10,6 +11,13 @@ import (
 	"github.com/Azure/azure-sdk-for-go/sdk/messaging/azservicebus"
 	"github.com/opentracing/opentracing-go"
 )
+
+// so we dont have to import the azure repo everywhere
+type ReceivedMessage = azservicebus.ReceivedMessage
+
+type Handler interface {
+	Handle(context.Context, *ReceivedMessage) error
+}
 
 const (
 	// RenewalTime is the how often we want to renew the message PEEK lock
@@ -99,21 +107,22 @@ func NewReceiver(log Logger, cfg ReceiverConfig) *Receiver {
 		}
 	}
 
-	return &Receiver{
+	r := &Receiver{
 		Cfg:      cfg,
-		log:      log,
 		azClient: NewAZClient(cfg.ConnectionString),
 		options:  options,
 	}
+	r.log = log.WithIndex("receiver", r.String())
+	return r
 }
 
 func (r *Receiver) GetAZClient() AZClient {
 	return r.azClient
 }
 
-// String - returns string represena=tation of receiver.
-// No log function calls in this methgod please.“
+// String - returns string representation of receiver.
 func (r *Receiver) String() string {
+	// No log function calls in this method please.
 	if r.Cfg.SubscriptionName != "" {
 		if r.Cfg.Deadletter {
 			return fmt.Sprintf("%s.%s.deadletter", r.Cfg.TopicOrQueueName, r.Cfg.SubscriptionName)
@@ -128,12 +137,29 @@ func (r *Receiver) String() string {
 
 // elapsed emits 2 log messages detailing how long processing took.
 // TODO: emit the processing time as a prometheus metric.
-func (r *Receiver) elapsed(ctx context.Context, count int, total int, msg *ReceivedMessage, handler Handler) error {
-	r.log.Debugf("%s: Processing message %d of %d", r, count, total)
+func (r *Receiver) elapsed(ctx context.Context, count int, total int, maxDuration time.Duration, msg *ReceivedMessage, handler Handler) error {
 	now := time.Now()
 	ctx = ContextFromReceivedMessage(ctx, msg)
+	log := r.log.FromContext(ctx)
+	defer log.Close()
+
+	log.Debugf("Processing message %d of %d", count, total)
 	err := handler.Handle(ctx, msg)
-	r.log.Debugf("%s: Processing message took %s", r, time.Since(now))
+	duration := time.Since(now)
+	log.Debugf("Processing message %d took %s", count, duration)
+	// This is safe because maxDuration is only defined if RenewMessageLock is false.
+	if !r.Cfg.RenewMessageLock && duration >= maxDuration {
+		log.Infof("WARNING: processing msg %d duration %v took more than %v seconds", count, duration, maxDuration)
+		log.Infof("WARNING: please either enable SERVICEBUS_RENEW_LOCK or reduce SERVICEBUS_INCOMING_MESSAGES")
+		log.Infof("WARNING: both can be found in the helm chart for each service.")
+	}
+	if err != nil {
+		if errors.Is(err, ErrPeekLockTimeout) {
+			log.Infof("WARNING: processing msg %d duration %s returned error: %v", count, duration, err)
+			log.Infof("WARNING: please either enable SERVICEBUS_RENEW_LOCK or reduce SERVICEBUS_INCOMING_MESSAGES")
+			log.Infof("WARNING: both can be found in the helm chart for each service.")
+		}
+	}
 	return err
 
 }
@@ -181,8 +207,7 @@ func (r *Receiver) ReceiveMessages(handler Handler) error {
 		return azerr
 	}
 	r.log.Debugf(
-		"Receive %s: NumberOfReceivedMessages %d, RenewMessageLock: %v",
-		r.String(),
+		"NumberOfReceivedMessages %d, RenewMessageLock: %v",
 		r.Cfg.NumberOfReceivedMessages,
 		r.Cfg.RenewMessageLock,
 	)
@@ -200,11 +225,11 @@ func (r *Receiver) ReceiveMessages(handler Handler) error {
 		r.log.Debugf("total messages %d", total)
 
 		err = func(fctx context.Context) error {
-			var ectx context.Context // we need a cancellation if RenewMEssageLock is enabled
+			var ectx context.Context // we need a cancellation if RenewMessageLock is enabled
 			var ecancel context.CancelFunc
 			if r.Cfg.RenewMessageLock {
 				// start up RenewMessageLock goroutines before processing any
-				// messages. Inherit values from input context.
+				// messages.
 				ectx, ecancel = context.WithCancel(fctx)
 				defer ecancel()
 				for i := 0; i < total; i++ {
@@ -216,16 +241,20 @@ func (r *Receiver) ReceiveMessages(handler Handler) error {
 			// ignored by the elapsed function.
 			var rctx context.Context // we need a timeout if RenewMessageLock is disabled
 			var rcancel context.CancelFunc
+			var maxDuration time.Duration
 			for i := 0; i < total; i++ {
 				msg := messages[i]
 				if r.Cfg.RenewMessageLock {
 					rctx = fctx
 				} else {
-					rctx, rcancel = setTimeout(fctx, r.log, msg)
+					rctx, rcancel, maxDuration = setTimeout(fctx, r.log, msg)
 					defer rcancel()
 				}
-				elapsedErr := r.elapsed(rctx, i+1, total, msg, handler)
+				elapsedErr := r.elapsed(rctx, i+1, total, maxDuration, msg, handler)
 				if elapsedErr != nil {
+					// return here so that no further messages are processed
+					// XXXX: check for ErrPeekLockTimeout and only terminate
+					//       then?
 					return elapsedErr
 				}
 			}
@@ -244,7 +273,7 @@ func (r *Receiver) Open() error {
 	if r.receiver != nil {
 		return nil
 	}
-	r.log.Debugf("Open Receiver %s", r)
+	r.log.Debugf("Open")
 	client, err := r.azClient.azClient()
 	if err != nil {
 		return err
@@ -286,16 +315,16 @@ func (r *Receiver) Close(ctx context.Context) {
 
 // Abandon abandons message. This function is not used but is present for consistency.
 func (r *Receiver) Abandon(ctx context.Context, err error, msg *ReceivedMessage) error {
-	ctx = contextWithoutCancel(ctx)
+	ctx = context.WithoutCancel(ctx)
 	log := r.log.FromContext(ctx)
 	defer log.Close()
 
 	span, ctx := opentracing.StartSpanFromContext(ctx, "Message.Abandon")
 	defer span.Finish()
-	log.Infof("%s, Abandon Message on DeliveryCount %d: %v", r, msg.DeliveryCount, err)
+	log.Infof("Abandon Message on DeliveryCount %d: %v", msg.DeliveryCount, err)
 	err1 := r.receiver.AbandonMessage(ctx, msg, nil)
 	if err1 != nil {
-		azerr := fmt.Errorf("%s: Abandon Message failure: %w", r, NewAzbusError(err1))
+		azerr := fmt.Errorf("Abandon Message failure: %w", NewAzbusError(err1))
 		log.Infof("%s", azerr)
 	}
 	return nil
@@ -307,51 +336,51 @@ func (r *Receiver) Abandon(ctx context.Context, err error, msg *ReceivedMessage)
 // unused arguments for consistency and in case we need to implement more sophisticated
 // algorithms in future.
 func (r *Receiver) Reschedule(ctx context.Context, err error, msg *ReceivedMessage) error {
-	ctx = contextWithoutCancel(ctx)
+	ctx = context.WithoutCancel(ctx)
 	log := r.log.FromContext(ctx)
 	defer log.Close()
 
 	span, _ := opentracing.StartSpanFromContext(ctx, "Message.Reschedule")
 	defer span.Finish()
-	log.Infof("%s, Reschedule Message on DeliveryCount %d: %v", r, msg.DeliveryCount, err)
+	log.Infof("Reschedule Message on DeliveryCount %d: %v", msg.DeliveryCount, err)
 	return nil
 }
 
 // DeadLetter explicitly deadletters a message.
 func (r *Receiver) DeadLetter(ctx context.Context, err error, msg *ReceivedMessage) error {
-	ctx = contextWithoutCancel(ctx)
+	ctx = context.WithoutCancel(ctx)
 	log := r.log.FromContext(ctx)
 	defer log.Close()
 
 	span, ctx := opentracing.StartSpanFromContext(ctx, "Message.DeadLetter")
 	defer span.Finish()
-	log.Infof("%s: DeadLetter Message: %v", r, err)
+	log.Infof("DeadLetter Message: %v", err)
 	options := azservicebus.DeadLetterOptions{
 		Reason: to.Ptr(err.Error()),
 	}
 	err1 := r.receiver.DeadLetterMessage(ctx, msg, &options)
 	if err1 != nil {
-		azerr := fmt.Errorf("%s: DeadLetter Message failure: %w", r, NewAzbusError(err1))
+		azerr := fmt.Errorf("DeadLetter Message failure: %w", NewAzbusError(err1))
 		log.Infof("%s", azerr)
 	}
 	return nil
 }
 
 func (r *Receiver) Complete(ctx context.Context, msg *ReceivedMessage) error {
-	ctx = contextWithoutCancel(ctx)
+	ctx = context.WithoutCancel(ctx)
 	log := r.log.FromContext(ctx)
 	defer log.Close()
 
 	span, _ := opentracing.StartSpanFromContext(ctx, "Message.Complete")
 	defer span.Finish()
 
-	log.Infof("%s: Complete Message", r)
+	log.Infof("Complete Message")
 
 	err := r.receiver.CompleteMessage(ctx, msg, nil)
 	if err != nil {
 		// If the completion fails then the message will get rescheduled, but it's effect will
 		// have been made, so we could get duplication issues.
-		azerr := fmt.Errorf("%s: Complete: failed to settle message: %w", r, NewAzbusError(err))
+		azerr := fmt.Errorf("Complete: failed to settle message: %w", NewAzbusError(err))
 		log.Infof("%s", azerr)
 	}
 	return nil
