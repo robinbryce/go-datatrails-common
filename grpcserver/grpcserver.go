@@ -24,8 +24,7 @@ type grpcUnaryServerInterceptor = grpc.UnaryServerInterceptor
 
 type RegisterServer func(*grpcServer)
 
-func defaultRegisterServer(g *grpcServer) {
-}
+func defaultRegisterServer(g *grpcServer) {}
 
 type GRPCServer struct {
 	name         string
@@ -109,7 +108,7 @@ func (g *GRPCServer) Listen() error {
 
 	g.health.Ready() // readiness
 
-	g.log.Infof("Listening")
+	g.log.Infof("Listen")
 	err = g.server.Serve(listen)
 	if err != nil && !errors.Is(err, context.Canceled) {
 		return fmt.Errorf("failed to serve %s: %w", g, err)

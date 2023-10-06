@@ -17,6 +17,7 @@ type HTTPServer struct {
 }
 
 func NewHTTPServer(log Logger, name string, port string, handler http.Handler) *HTTPServer {
+	log.Debugf("New HTTPServer %s", name)
 	m := HTTPServer{
 		Server: http.Server{
 			Addr:    ":" + port,
@@ -27,6 +28,7 @@ func NewHTTPServer(log Logger, name string, port string, handler http.Handler) *
 	m.log = log.WithIndex("httpserver", m.String())
 	// It is preferable to return a copy rather than a reference. Unfortunately http.Server has an
 	// internal mutex and this cannot or should not be copied so we will return a reference instead.
+	log.Debugf("HTTPServer %v", m)
 	return &m
 }
 
@@ -36,7 +38,7 @@ func (m *HTTPServer) String() string {
 }
 
 func (m *HTTPServer) Listen() error {
-	m.log.Infof("httpserver starting")
+	m.log.Infof("Listen")
 	err := m.ListenAndServe()
 	if err != nil {
 		return fmt.Errorf("%s server terminated: %v", m, err)
@@ -47,6 +49,6 @@ func (m *HTTPServer) Listen() error {
 func (m *HTTPServer) Shutdown(ctx context.Context) error {
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
-	m.log.Infof("httpserver shutdown")
+	m.log.Infof("Shutdown")
 	return m.Server.Shutdown(ctx)
 }
