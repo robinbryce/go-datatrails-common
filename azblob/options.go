@@ -1,5 +1,7 @@
 package azblob
 
+import "time"
+
 type GetMetadata int
 
 const (
@@ -8,21 +10,94 @@ const (
 	BothMetadataAndBlob
 )
 
+type ETagCondition int
+
+const (
+	EtagNotUsed ETagCondition = iota
+	ETagMatch
+	ETagNoneMatch
+	TagsWhere
+)
+
+type IfSinceCondition int
+
+const (
+	IfConditionNotUsed IfSinceCondition = iota
+	IfConditionModifiedSince
+	IfConditionUnmodifiedSince
+)
+
 func (g GetMetadata) String() string {
 	return [...]string{"No metadata handling", "Only metadata", "metadata and blob"}[g]
 }
 
 // StorerOptions - optional args for specifying optional behaviour
 type StorerOptions struct {
-	leaseID     string
-	metadata    map[string]string
-	tags        map[string]string
-	getMetadata GetMetadata
-	getTags     bool
-	sizeLimit   int64
+	leaseID        string
+	metadata       map[string]string
+	tags           map[string]string
+	getMetadata    GetMetadata
+	getTags        bool
+	sizeLimit      int64
+	etag           string
+	etagCondition  ETagCondition // ETagMatch || ETagNoneMatch
+	sinceCondition IfSinceCondition
+	since          *time.Time
 }
 
 type Option func(*StorerOptions)
+
+func WithModifiedSince(since *time.Time) Option {
+	return func(a *StorerOptions) {
+		if since == nil {
+			a.sinceCondition = IfConditionNotUsed
+			a.since = nil
+			return
+		}
+		a.sinceCondition = IfConditionModifiedSince
+		a.since = since
+	}
+}
+
+func WithUnmodifiedSince(since *time.Time) Option {
+	return func(a *StorerOptions) {
+		if since == nil {
+			a.sinceCondition = IfConditionNotUsed
+			a.since = nil
+			return
+		}
+		a.sinceCondition = IfConditionUnmodifiedSince
+		a.since = since
+	}
+}
+
+// WithEtagMatch succeed if the blob etag matches the provied value
+// Typically used to make optimistic concurrency updates safe.
+func WithEtagMatch(etag string) Option {
+	return func(a *StorerOptions) {
+		a.etag = etag
+		// Only one condition at a time is possible. If multiple are requested, the last one wins
+		a.etagCondition = ETagMatch
+	}
+}
+
+// WithEtagNoneMatch succeed if the blob etag does *not* match the supplied value
+func WithEtagNoneMatch(etag string) Option {
+	return func(a *StorerOptions) {
+		a.etag = etag
+		// Only one condition at a time is possible. If multiple are requested, the last one wins
+		a.etagCondition = ETagNoneMatch
+	}
+}
+
+// WithWhereTags succeed if the where clause matches the blob tags)
+func WithWhereTags(whereTags string) Option {
+	return func(a *StorerOptions) {
+		a.etag = whereTags
+		// Only one condition at a time is possible. If multiple are requested, the last one wins
+		a.etagCondition = TagsWhere
+	}
+}
 
 // Specifying an option that is no used is silently ignored. i.e. Specifying
 // WithMetadata() in a call to Reader() will not raise an error.
