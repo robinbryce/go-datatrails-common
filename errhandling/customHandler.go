@@ -7,8 +7,8 @@ import (
 	"io"
 	"net/http"
 
+	"github.com/datatrails/go-datatrails-common/logger"
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
-	"github.com/rkvst/go-rkvstcommon/logger"
 	"google.golang.org/grpc/codes"
 )
 
