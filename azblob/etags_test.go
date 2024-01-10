@@ -1,3 +1,5 @@
+//go:build azurite
+
 package azblob
 
 import (
