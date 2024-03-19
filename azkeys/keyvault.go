@@ -40,11 +40,6 @@ func (kv *KeyVault) GetKeyByKID(
 	ctx context.Context, keyID string,
 ) (keyvault.KeyBundle, error) {
 
-	log := logger.Sugar.FromContext(ctx)
-	defer log.Close()
-
-	log.Infof("GetKeyByKID: %s %s", kv.url, keyID)
-
 	kvClient, err := NewKvClient(kv.Authorizer)
 	if err != nil {
 		return keyvault.KeyBundle{}, err
@@ -66,11 +61,6 @@ func (kv *KeyVault) GetKeyByKID(
 func (kv *KeyVault) GetLatestKey(
 	ctx context.Context, keyName string,
 ) (keyvault.KeyBundle, error) {
-
-	log := logger.Sugar.FromContext(ctx)
-	defer log.Close()
-
-	log.Infof("GetLatestKey: %s %s", kv.url, keyName)
 
 	kvClient, err := NewKvClient(kv.Authorizer)
 	if err != nil {
@@ -94,8 +84,6 @@ func (kv *KeyVault) GetKeyVersionsKeys(
 
 	log := logger.Sugar.FromContext(ctx)
 	defer log.Close()
-
-	log.Infof("GetKeyVersions: %s %s", kv.url, keyID)
 
 	kvClient, err := NewKvClient(kv.Authorizer)
 	if err != nil {
@@ -139,11 +127,6 @@ func (kv *KeyVault) GetKeyVersionsKeys(
 
 // getKeysFromVersions gets the keys from the given key versions
 func (kv *KeyVault) getKeysFromVersions(ctx context.Context, keyVersions []keyvault.KeyItem) ([]keyvault.KeyBundle, error) {
-
-	log := logger.Sugar.FromContext(ctx)
-	defer log.Close()
-
-	log.Infof("getKeysFromVersions")
 
 	keys := []keyvault.KeyBundle{}
 
@@ -194,19 +177,12 @@ func (kv *KeyVault) Sign(
 	algorithm keyvault.JSONWebKeySignatureAlgorithm,
 ) ([]byte, error) {
 
-	log := logger.Sugar.FromContext(ctx)
-	defer log.Close()
-
-	log.Infof("Sign: %s %s", kv.url, keyID)
-
 	kvClient, err := NewKvClient(kv.Authorizer)
 	if err != nil {
 		return []byte{}, fmt.Errorf("failed to create keyvault client: %w", err)
 	}
 
 	payloadStr := base64.URLEncoding.EncodeToString(payload)
-
-	logger.Sugar.Infof("Payload Str: %v", payloadStr)
 
 	params := keyvault.KeySignParameters{
 		Algorithm: algorithm,
@@ -220,7 +196,6 @@ func (kv *KeyVault) Sign(
 		return []byte{}, fmt.Errorf("failed to sign payload: %w", err)
 	}
 
-	logger.Sugar.Infof("SignatureB64: %v", *signatureb64.Result)
 	signature, err := base64.URLEncoding.DecodeString(*signatureb64.Result)
 
 	return signature, err
@@ -254,11 +229,6 @@ func (kv *KeyVault) HashAndSign(
 	algorithm keyvault.JSONWebKeySignatureAlgorithm,
 ) ([]byte, error) {
 
-	log := logger.Sugar.FromContext(ctx)
-	defer log.Close()
-
-	log.Infof("HashAndSign: %s %s", kv.url, keyID)
-
 	key, err := kv.GetKeyByKID(ctx, keyID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get key: %w", err)
@@ -286,11 +256,6 @@ func (kv *KeyVault) Verify(
 	keyVersion string,
 	algorithm keyvault.JSONWebKeySignatureAlgorithm,
 ) (bool, error) {
-
-	log := logger.Sugar.FromContext(ctx)
-	defer log.Close()
-
-	log.Infof("Verify: %s %s", kv.url, keyID)
 
 	kvClient, err := NewKvClient(kv.Authorizer)
 	if err != nil {
