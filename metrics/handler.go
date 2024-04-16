@@ -2,7 +2,6 @@ package metrics
 
 import (
 	"net/http"
-	"strconv"
 	"strings"
 	"time"
 
@@ -55,10 +54,6 @@ func (m *Metrics) NewLatencyMetricsHandler(h http.Handler) http.Handler {
 		latency := time.Since(start).Seconds()
 
 		header := lrw.Header()
-		log.Debugf("Headers after processing: %v", header)
-
-		statusCode := strconv.Itoa(lrw.StatusCode)
-		log.Debugf("status code: %s", statusCode)
 
 		// generate post-process metrics here...
 

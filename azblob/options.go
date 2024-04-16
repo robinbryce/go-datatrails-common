@@ -44,9 +44,10 @@ type StorerOptions struct {
 	sinceCondition IfSinceCondition
 	since          *time.Time
 	// Options for List()
-	listPrefix string
-	listDelim  string
-	listMarker ListMarker
+	listPrefix     string
+	listDelim      string
+	listMarker     ListMarker
+	listMaxResults int32
 	// extra data model items to include in the respponse
 	listIncludeTags     bool
 	listIncludeMetadata bool
@@ -59,6 +60,13 @@ type Option func(*StorerOptions)
 func WithListPrefix(prefix string) Option {
 	return func(a *StorerOptions) {
 		a.listPrefix = prefix
+	}
+}
+
+// WithListMaxResults adds an option to limit the page size, default at time of writing 5000
+func WithListMaxResults(maxResults int32) Option {
+	return func(a *StorerOptions) {
+		a.listMaxResults = maxResults
 	}
 }
 
