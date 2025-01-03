@@ -15,6 +15,7 @@ var (
 )
 
 // Handler processes a ReceivedMessage.
+// Use this style of handler to take advantage of the automatic peek lock renewal and disposal of messages.
 type Handler interface {
 	Handle(context.Context, *ReceivedMessage) (Disposition, context.Context, error)
 	Open() error
@@ -22,7 +23,11 @@ type Handler interface {
 }
 
 const (
-	// RenewalTime is the how often we want to renew the message PEEK lock
+	// DefaultRenewalTime is the how often we want to renew the message PEEK lock
+	// If RenewMessageLock is true then this is the default value for RenewMessageTime.
+	//
+	// Note that the default aligns with the default value for topics and queues in Azure Service Bus.
+	// Unless the topic or queue has been configured with a different value, you should not need to change this.
 	//
 	// Inspection of the topics and subscription shows that the PeekLock timeout is one minute.
 	//
@@ -39,7 +44,7 @@ const (
 	// normal test suites.
 	//
 	// Set to 50 seconds, well within the 60 seconds peek lock timeout
-	RenewalTime = 50 * time.Second
+	DefaultRenewalTime = 50 * time.Second
 )
 
 // Settings for Receivers:
@@ -69,7 +74,10 @@ type ReceiverConfig struct {
 	SubscriptionName string
 
 	// See azbus/receiver.go
+	// Note: RenewMessageLock has no effect when using the batched handler (BatchSize > 0)
 	RenewMessageLock bool
+
+	// RenewMessageTime is the how often we want to renew the message PEEK lock
 	RenewMessageTime time.Duration
 
 	// If a deadletter receiver then this is true
@@ -93,6 +101,8 @@ type Receiver struct {
 type ReceiverOption func(*Receiver)
 
 // WithHandlers
+// Add's individual message handlers to the receiver.
+// Mutually exclusive with WithBatchHandler.
 func WithHandlers(h ...Handler) ReceiverOption {
 	return func(r *Receiver) {
 		r.handlers = append(r.handlers, h...)
@@ -138,7 +148,7 @@ func newReceiver(r *Receiver, log Logger, cfg ReceiverConfig, opts ...ReceiverOp
 
 	// Set this to a default that corresponds to the az servicebus default peek-lock timeout
 	if r.Cfg.RenewMessageTime == 0 {
-		r.Cfg.RenewMessageTime = RenewalTime
+		r.Cfg.RenewMessageTime = DefaultRenewalTime
 	}
 
 	return r

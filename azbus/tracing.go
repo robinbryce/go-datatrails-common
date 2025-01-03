@@ -6,7 +6,7 @@ import (
 	opentracing "github.com/opentracing/opentracing-go"
 )
 
-func (r *Receiver) handleReceivedMessageWithTracingContext(ctx context.Context, message *ReceivedMessage, handler Handler) (Disposition, context.Context, error) {
+func (r *Receiver) CreateReceivedMessageTracingContext(ctx context.Context, message *ReceivedMessage, handler Handler) (context.Context, opentracing.Span) {
 	// We don't have the tracing span info on the context yet, that is what this function will add
 	// we we log using the reciever logger
 	r.log.Debugf("ContextFromReceivedMessage(): ApplicationProperties %v", message.ApplicationProperties)
@@ -26,13 +26,18 @@ func (r *Receiver) handleReceivedMessageWithTracingContext(ctx context.Context, 
 	}
 	spanCtx, err := opentracing.GlobalTracer().Extract(opentracing.TextMap, carrier)
 	if err != nil {
-		r.log.Infof("handleReceivedMessageWithTracingContext(): Unable to extract span context: %v", err)
+		r.log.Infof("CreateReceivedMessageWithTracingContext(): Unable to extract span context: %v", err)
 	} else {
 		opts = append(opts, opentracing.ChildOf(spanCtx))
 	}
 	span := opentracing.StartSpan("handle message", opts...)
-	defer span.Finish()
 	ctx = opentracing.ContextWithSpan(ctx, span)
+	return ctx, span
+}
+
+func (r *Receiver) handleReceivedMessageWithTracingContext(ctx context.Context, message *ReceivedMessage, handler Handler) (Disposition, context.Context, error) {
+	ctx, span := r.CreateReceivedMessageTracingContext(ctx, message, handler)
+	defer span.Finish()
 	return handler.Handle(ctx, message)
 }
 
