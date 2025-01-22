@@ -6,7 +6,6 @@ package azkeys
 // service code.
 
 import (
-	"context"
 	"crypto/ecdsa"
 	"io"
 	"testing"
@@ -15,22 +14,6 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/veraison/go-cose"
 )
-
-type TestCoseSignerFactory struct {
-	t          *testing.T
-	signingKey ecdsa.PrivateKey
-}
-
-func NewTestCoseSignerFactory(t *testing.T, signingKey ecdsa.PrivateKey) IdentifiableCoseSignerFactory {
-	return &TestCoseSignerFactory{
-		t:          t,
-		signingKey: signingKey,
-	}
-}
-
-func (f *TestCoseSignerFactory) NewIdentifiableCoseSigner(ctx context.Context) (IdentifiableCoseSigner, error) {
-	return NewTestCoseSigner(f.t, f.signingKey), nil
-}
 
 // TestCoseSigner implements IdentifiableCoseSigner for use with the factory setup in logconfirmer.
 type TestCoseSigner struct {
