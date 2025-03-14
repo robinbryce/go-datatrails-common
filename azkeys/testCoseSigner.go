@@ -56,5 +56,7 @@ func (s *TestCoseSigner) KeyLocation() string {
 }
 
 func (s *TestCoseSigner) KeyIdentifier() string {
-	return "foo/bar"
+
+	// the returned kid needs to match the kid format of the keyvault key
+	return "location:testkey/version1"
 }
