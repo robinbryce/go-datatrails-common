@@ -104,27 +104,27 @@ func base64BEtoBigInt(in string) (*big.Int, error) {
 	return i, nil
 }
 
-// PublicKey returns the public key for this instance of CoseSignerKeyVault
+// publicKey returns the public key for the given keyvualt key bundle
 //
 // NOTE: Only valid for ECDSA
-func (kv *KeyVaultCoseSigner) PublicKey() (*ecdsa.PublicKey, error) {
-	if kv.key.Key.X == nil || kv.key.Key.Y == nil {
+func publicKey(key keyvault.KeyBundle) (*ecdsa.PublicKey, error) {
+	if key.Key.X == nil || key.Key.Y == nil {
 		return nil, fmt.Errorf("public key is nil")
 	}
 
-	X, err := base64BEtoBigInt(*kv.key.Key.X)
+	X, err := base64BEtoBigInt(*key.Key.X)
 	if err != nil {
-		return nil, fmt.Errorf("unable to convert X %s: %w", *kv.key.Key.X, err)
+		return nil, fmt.Errorf("unable to convert X %s: %w", *key.Key.X, err)
 	}
 
-	Y, err := base64BEtoBigInt(*kv.key.Key.Y)
+	Y, err := base64BEtoBigInt(*key.Key.Y)
 	if err != nil {
-		return nil, fmt.Errorf("unable to convert Y %s: %w", *kv.key.Key.Y, err)
+		return nil, fmt.Errorf("unable to convert Y %s: %w", *key.Key.Y, err)
 	}
 
 	var curve elliptic.Curve
 
-	switch kv.key.Key.Crv {
+	switch key.Key.Crv {
 	case keyvault.P256:
 		curve = elliptic.P256()
 	case keyvault.P384:
@@ -140,6 +140,29 @@ func (kv *KeyVaultCoseSigner) PublicKey() (*ecdsa.PublicKey, error) {
 		X:     X,
 		Y:     Y,
 	}, nil
+
+}
+
+// PublicKey returns the public key for this instance of CoseSignerKeyVault
+// given the kid.
+//
+// NOTE: Only valid for ECDSA
+func (kv *KeyVaultCoseSigner) PublicKey(ctx context.Context, kid string) (*ecdsa.PublicKey, error) {
+
+	key, err := kv.GetKeyByKID(ctx, kid)
+	if err != nil {
+		return nil, fmt.Errorf("unable to get latest key for %s: %w", kv.keyName, err)
+	}
+
+	return publicKey(key)
+
+}
+
+// LatestPublicKey returns the latest public key for this instance of CoseSignerKeyVault
+//
+// NOTE: Only valid for ECDSA
+func (kv *KeyVaultCoseSigner) LatestPublicKey() (*ecdsa.PublicKey, error) {
+	return publicKey(kv.key)
 }
 
 // Sign signs a given content

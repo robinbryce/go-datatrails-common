@@ -6,6 +6,7 @@ package azkeys
 // service code.
 
 import (
+	"context"
 	"crypto/ecdsa"
 	"io"
 	"testing"
@@ -42,7 +43,11 @@ func (s *TestCoseSigner) Sign(rand io.Reader, content []byte) ([]byte, error) {
 	return s.innerSigner.Sign(rand, content)
 }
 
-func (s *TestCoseSigner) PublicKey() (*ecdsa.PublicKey, error) {
+func (s *TestCoseSigner) LatestPublicKey() (*ecdsa.PublicKey, error) {
+	return &s.publicKey, nil
+}
+
+func (s *TestCoseSigner) PublicKey(ctx context.Context, kid string) (*ecdsa.PublicKey, error) {
 	return &s.publicKey, nil
 }
 
