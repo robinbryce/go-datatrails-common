@@ -2,12 +2,6 @@ linters-settings:
   funlen:
     lines: 350
     statements: 135
-  depguard:
-    list-type: blacklist
-    packages:
-      # logging is allowed only by logutils.Log, logrus
-      # is allowed to use only in logutils package
-      - github.com/sirupsen/logrus
   dupl:
     threshold: 100
   errorlint:
@@ -101,8 +95,6 @@ linters-settings:
           - Fatalf
   lll:
     line-length: 500
-  maligned:
-    suggest-new: true
   misspell:
     locale: UK
 
@@ -118,13 +110,6 @@ linters-settings:
 # gomnd - see ticket #3116
 # govet - see ticket #3117
 # nilreturn onwardis not yet evaluated...
-# maligned - this guards against performance issues due to accessing
-#            mis-aligned structs. We don't have direct evidence of this being a
-#            real problem for us. We use a lot of generated code in our hot
-#            paths anyway (we have no control over there layout). Until we get
-#            direct evidence this is hurting us, we prefer our stucts layed out
-#            logically and don't want to have to nolint tag everything.
-#
 # misspell - expected UK spelling with misspell, but customer facing text needs to be US.
 # tagalign - suppress until we can get a golang code formatter that will fix this (cosmetic)
 #
