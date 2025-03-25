@@ -1,4 +1,4 @@
-package azkeys
+package cose
 
 // testCoseSigner.go contains an implementation of the IdentifiableCoseSigner and
 // IdentifiableCoseSignerFactory interfaces to enable unit testing. The actual signing logic is
@@ -11,7 +11,6 @@ import (
 	"io"
 	"testing"
 
-	dtcose "github.com/datatrails/go-datatrails-common/cose"
 	"github.com/stretchr/testify/require"
 	"github.com/veraison/go-cose"
 )
@@ -23,7 +22,7 @@ type TestCoseSigner struct {
 }
 
 func NewTestCoseSigner(t *testing.T, signingKey ecdsa.PrivateKey) *TestCoseSigner {
-	alg, err := dtcose.CoseAlgForEC(signingKey.PublicKey)
+	alg, err := CoseAlgForEC(signingKey.PublicKey)
 	require.NoError(t, err)
 
 	signer, err := cose.NewSigner(alg, &signingKey)
