@@ -86,7 +86,7 @@ func (kv *KeyVault) GetKeyVersionsKeys(
 	ctx context.Context, keyID string,
 ) ([]keyvault.KeyBundle, error) {
 
-	log := logger.Sugar.FromContext(ctx)
+	log := tracing.LogFromContext(ctx, logger.Sugar)
 	defer log.Close()
 
 	kvClient, err := NewKvClient(kv.Authorizer)

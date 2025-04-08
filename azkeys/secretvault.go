@@ -85,7 +85,7 @@ func NewKvClient(authorizer autorest.Authorizer) (keyvault.BaseClient, error) {
 func (k *SecretVault) ReadSecret(
 	ctx context.Context, id string,
 ) (*SecretEntry, error) {
-	log := logger.Sugar.FromContext(ctx)
+	log := tracing.LogFromContext(ctx, logger.Sugar)
 	defer log.Close()
 
 	log.Infof("ReadSecret: %s %s", k.Name, id)
@@ -122,7 +122,7 @@ func (k *SecretVault) ReadSecret(
 func (k *SecretVault) GetOrgKeyHex(
 	ctx context.Context, id string,
 ) (*string, error) {
-	log := logger.Sugar.FromContext(ctx)
+	log := tracing.LogFromContext(ctx, logger.Sugar)
 	defer log.Close()
 
 	log.Infof("looking for a secret: %s", id)
@@ -140,7 +140,7 @@ func (k *SecretVault) GetOrgKeyHex(
 func (k *SecretVault) ListSecrets(
 	ctx context.Context, prefix string, tags map[string]string,
 ) (map[string]SecretEntry, error) {
-	log := logger.Sugar.FromContext(ctx)
+	log := tracing.LogFromContext(ctx, logger.Sugar)
 	defer log.Close()
 
 	log.Debugf("ListSecrets")

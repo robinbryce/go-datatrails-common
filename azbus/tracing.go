@@ -3,6 +3,7 @@ package azbus
 import (
 	"context"
 
+	"github.com/datatrails/go-datatrails-common/tracing"
 	opentracing "github.com/opentracing/opentracing-go"
 )
 
@@ -42,7 +43,7 @@ func (r *Receiver) handleReceivedMessageWithTracingContext(ctx context.Context, 
 }
 
 func (s *Sender) updateSendingMesssageForSpan(ctx context.Context, message *OutMessage, span opentracing.Span) {
-	log := s.log.FromContext(ctx)
+	log := tracing.LogFromContext(ctx, s.log)
 	defer log.Close()
 
 	carrier := opentracing.TextMapCarrier{}

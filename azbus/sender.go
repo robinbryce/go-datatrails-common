@@ -111,7 +111,7 @@ func (s *Sender) Send(ctx context.Context, message *OutMessage) error {
 
 	// Get the logging context after we create the span as that may have created a new
 	// trace and stashed the traceid in the metadata.
-	log := s.log.FromContext(ctx)
+	log := tracing.LogFromContext(ctx, s.log)
 	defer log.Close()
 
 	// boots & braces
@@ -181,7 +181,7 @@ func (s *Sender) SendBatch(ctx context.Context, batch *OutMessageBatch) error {
 
 	// Get the logging context after we create the span as that may have created a new
 	// trace and stashed the traceid in the metadata.
-	log := s.log.FromContext(ctx)
+	log := tracing.LogFromContext(ctx, s.log)
 	defer log.Close()
 
 	// boots & braces

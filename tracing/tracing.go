@@ -13,6 +13,7 @@ import (
 
 	otnethttp "github.com/opentracing-contrib/go-stdlib/nethttp"
 	opentracing "github.com/opentracing/opentracing-go"
+	opentracinglog "github.com/opentracing/opentracing-go/log"
 
 	zipkinot "github.com/openzipkin-contrib/zipkin-go-opentracing"
 	zipkin "github.com/openzipkin/zipkin-go"
@@ -61,6 +62,29 @@ func TraceIDFromContext(ctx context.Context) string {
 	}
 
 	return valueFromCarrier(carrier, TraceID)
+}
+
+func SetSpanHTTPHeader(span opentracing.Span, log Logger, r *http.Request) {
+	// Transmit the span's TraceContext as HTTP headers on our request
+	if span != nil {
+		err := opentracing.GlobalTracer().Inject(
+			span.Context(),
+			opentracing.HTTPHeaders,
+			opentracing.HTTPHeadersCarrier(r.Header),
+		)
+		if err != nil {
+			log.Infof("Tracer.Inject %v", err)
+		}
+	}
+}
+
+func SetSpanField(ctx context.Context, key string, value string) {
+	span := opentracing.SpanFromContext(ctx)
+	if span != nil {
+		span.LogFields(
+			opentracinglog.String(key, value),
+		)
+	}
 }
 
 func NewSpanContext(ctx context.Context, operationName string) (opentracing.Span, context.Context) {

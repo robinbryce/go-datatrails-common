@@ -1,7 +1,6 @@
 package logger
 
 import (
-	"context"
 	"errors"
 	"fmt"
 	"log"
@@ -11,8 +10,6 @@ import (
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 	"go.uber.org/zap/zaptest/observer"
-
-	opentracing "github.com/opentracing/opentracing-go"
 )
 
 var (
@@ -23,9 +20,6 @@ var (
 
 const (
 	serviceNameKey = "servicename"
-	// We repeat this constant here as we don't want the circular dependency
-	// of importint our tracing package
-	TraceIDKey = "x-b3-traceid"
 )
 
 // so we dont have to import zap everywhere
@@ -202,52 +196,6 @@ func New(level string, opts ...any) {
 	undoLogger = zap.RedirectStdLog(plain)
 	Sugar = &WrappedLogger{
 		plain.Sugar(),
-	}
-}
-
-func valueFromCarrier(carrier opentracing.TextMapCarrier, key string) string {
-	value, found := carrier[key]
-	if !found || value == "" {
-		Sugar.Debugf("%s not found", key)
-		return ""
-	}
-	return value
-}
-
-// FromContext takes the trace ID from the current span and adds it to a child wrapped logger:
-//
-// returns:
-//   - the new wrapped logger with a context metadata value for traceID
-//
-// This will be called on entry to a method or a function that has a context.Context.
-func (wl *WrappedLogger) FromContext(ctx context.Context) *WrappedLogger {
-
-	span := opentracing.SpanFromContext(ctx)
-	if span == nil {
-		Sugar.WithOptions(zap.AddCallerSkip(1)).Infof("FromContext: span is nil - this should not happen - the context where this happened is missing tracing content - probably a middleware problem")
-		return wl
-	}
-	carrier := opentracing.TextMapCarrier{}
-	err := opentracing.GlobalTracer().Inject(span.Context(), opentracing.TextMap, carrier)
-	if err != nil {
-		Sugar.Infof("FromContext: can't inject span: %v", err)
-		return wl
-	}
-
-	fields := []any{}
-	traceID := valueFromCarrier(carrier, TraceIDKey)
-	if traceID != "" {
-		fields = append(fields, zap.String(TraceIDKey, traceID))
-	}
-
-	if len(fields) == 0 {
-		return wl
-	}
-	// add the fields to the logger
-	sugaredLogger := wl.With(fields...)
-
-	return &WrappedLogger{
-		SugaredLogger: sugaredLogger,
 	}
 }
 

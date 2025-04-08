@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/messaging/azservicebus"
+	"github.com/datatrails/go-datatrails-common/tracing"
 )
 
 var (
@@ -182,7 +183,7 @@ func (r *Receiver) processMessage(ctx context.Context, count int, maxDuration ti
 	duration := time.Since(now)
 
 	// Now we do have a tracing context we can use it for logging
-	log := r.log.FromContext(ctx)
+	log := tracing.LogFromContext(ctx, r.log)
 	defer log.Close()
 
 	log.Debugf("Processing message %d id %s took %s", count, msg.MessageID, duration)

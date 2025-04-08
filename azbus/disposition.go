@@ -140,27 +140,27 @@ func reschedule(ctx context.Context, log logger.Logger, r *azservicebus.Receiver
 
 // Abandon abandons message. This function is not used but is present for consistency.
 func (r *Receiver) abandon(ctx context.Context, err error, msg *ReceivedMessage) {
-	log := r.log.FromContext(ctx)
+	log := tracing.LogFromContext(ctx, r.log)
 	defer log.Close()
 
 	abandon(ctx, log, r.receiver, err, msg)
 }
 
 func (r *Receiver) reschedule(ctx context.Context, err error, msg *ReceivedMessage) {
-	log := r.log.FromContext(ctx)
+	log := tracing.LogFromContext(ctx, r.log)
 	defer log.Close()
 
 	reschedule(ctx, log, r.receiver, err, msg)
 }
 
 func (r *Receiver) deadLetter(ctx context.Context, err error, msg *ReceivedMessage) {
-	log := r.log.FromContext(ctx)
+	log := tracing.LogFromContext(ctx, r.log)
 	defer log.Close()
 	deadLetter(ctx, log, r.receiver, err, msg)
 }
 
 func (r *Receiver) complete(ctx context.Context, err error, msg *ReceivedMessage) {
-	log := r.log.FromContext(ctx)
+	log := tracing.LogFromContext(ctx, r.log)
 	defer log.Close()
 
 	complete(ctx, log, r.receiver, err, msg)
@@ -168,27 +168,27 @@ func (r *Receiver) complete(ctx context.Context, err error, msg *ReceivedMessage
 
 // Abandon abandons message. This function is not used but is present for consistency.
 func (r *BatchReceiver) abandon(ctx context.Context, err error, msg *ReceivedMessage) {
-	log := r.log.FromContext(ctx)
+	log := tracing.LogFromContext(ctx, r.log)
 	defer log.Close()
 
 	abandon(ctx, log, r.Receiver, err, msg)
 }
 
 func (r *BatchReceiver) reschedule(ctx context.Context, err error, msg *ReceivedMessage) {
-	log := r.log.FromContext(ctx)
+	log := tracing.LogFromContext(ctx, r.log)
 	defer log.Close()
 
 	reschedule(ctx, log, r.Receiver, err, msg)
 }
 
 func (r *BatchReceiver) deadLetter(ctx context.Context, err error, msg *ReceivedMessage) {
-	log := r.log.FromContext(ctx)
+	log := tracing.LogFromContext(ctx, r.log)
 	defer log.Close()
 	deadLetter(ctx, log, r.Receiver, err, msg)
 }
 
 func (r *BatchReceiver) complete(ctx context.Context, err error, msg *ReceivedMessage) {
-	log := r.log.FromContext(ctx)
+	log := tracing.LogFromContext(ctx, r.log)
 	defer log.Close()
 
 	complete(ctx, log, r.Receiver, err, msg)

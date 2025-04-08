@@ -1,9 +1,6 @@
 package logger
 
 // This is the external interface to the logger package.
-import (
-	"context"
-)
 
 const (
 	DebugLevel = "DEBUG"
@@ -23,7 +20,6 @@ type Logger interface {
 	Panicf(string, ...any)
 	Check(string) bool
 
-	FromContext(context.Context) *WrappedLogger
 	WithIndex(string, string) *WrappedLogger
 	WithServiceName(string) *WrappedLogger
 	Close()
