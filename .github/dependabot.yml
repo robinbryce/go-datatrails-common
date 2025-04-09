@@ -16,8 +16,9 @@ updates:
     schedule:
       # Check for updates managed by Composer once a week
       interval: "weekly"
-      day: "sunday"
-      time: "16:00"
+      day: "tuesday"
+      time: "03:00"
+      timezone: "Europe/London"
 
   # Maintain dependencies for Golang
   - package-ecosystem: "gomod"
@@ -27,5 +28,6 @@ updates:
     schedule:
       # Check for updates managed by Composer once a week
       interval: "weekly"
-      day: "sunday"
-      time: "16:00"
+      day: "tuesday"
+      time: "03:00"
+      timezone: "Europe/London"
