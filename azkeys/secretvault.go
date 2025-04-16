@@ -95,8 +95,8 @@ func (k *SecretVault) ReadSecret(
 		return nil, err
 	}
 
-	span, ctx := tracing.StartSpanFromContext(ctx, "KeyVault GetSecret")
-	defer span.Finish()
+	span, ctx := tracing.StartSpanFromContext(ctx, log, "KeyVault GetSecret")
+	defer span.Close()
 
 	secret, err := kvClient.GetSecret(ctx, k.Name, id, "")
 	if err != nil {
@@ -153,8 +153,8 @@ func (k *SecretVault) ListSecrets(
 	ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
 	defer cancel()
 
-	span, ctx := tracing.StartSpanFromContext(ctx, "KeyVault GetSecrets")
-	defer span.Finish()
+	span, ctx := tracing.StartSpanFromContext(ctx, log, "KeyVault GetSecrets")
+	defer span.Close()
 
 	// must be <= 25
 	maxResults := int32(25)
@@ -167,7 +167,7 @@ func (k *SecretVault) ListSecrets(
 		return nil, fmt.Errorf("failed to read secrets: %w", err)
 	}
 
-	span.Finish()
+	span.Close()
 
 	results := map[string]SecretEntry{}
 	for {

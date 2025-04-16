@@ -8,7 +8,6 @@ import (
 
 	"github.com/Azure/azure-sdk-for-go/sdk/messaging/azservicebus"
 	"github.com/google/uuid"
-	otlog "github.com/opentracing/opentracing-go/log"
 
 	"github.com/datatrails/go-datatrails-common/tracing"
 )
@@ -106,8 +105,8 @@ func (s *Sender) Send(ctx context.Context, message *OutMessage) error {
 
 	var err error
 
-	span, ctx := tracing.StartSpanFromContext(ctx, "Sender.Send")
-	defer span.Finish()
+	span, ctx := tracing.StartSpanFromContext(ctx, s.log, "Sender.Send")
+	defer span.Close()
 
 	// Get the logging context after we create the span as that may have created a new
 	// trace and stashed the traceid in the metadata.
@@ -126,10 +125,8 @@ func (s *Sender) Send(ctx context.Context, message *OutMessage) error {
 	id := uuid.New().String()
 	message.MessageID = &id
 
-	span.LogFields(
-		otlog.String("sender", s.Cfg.TopicOrQueueName),
-		otlog.String("message id", id),
-	)
+	span.LogField("sender", s.Cfg.TopicOrQueueName)
+	span.LogField("message id", id)
 
 	size := int64(len(message.Body))
 	log.Debugf("%s: Msg id %s Sized %d limit %d", s, id, size, s.maxMessageSizeInBytes)
@@ -173,11 +170,10 @@ func (s *Sender) SendBatch(ctx context.Context, batch *OutMessageBatch) error {
 
 	now := time.Now()
 
-	span, ctx := tracing.StartSpanFromContext(ctx, "Sender.SendBatch")
-	defer span.Finish()
-	span.LogFields(
-		otlog.String("sender", s.Cfg.TopicOrQueueName),
-	)
+	span, ctx := tracing.StartSpanFromContext(ctx, s.log, "Sender.SendBatch")
+	defer span.Close()
+
+	span.LogField("sender", s.Cfg.TopicOrQueueName)
 
 	// Get the logging context after we create the span as that may have created a new
 	// trace and stashed the traceid in the metadata.

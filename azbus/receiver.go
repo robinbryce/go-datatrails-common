@@ -177,7 +177,7 @@ func (r *Receiver) processMessage(ctx context.Context, count int, maxDuration ti
 	// the context wont have a trace span on it yet, so stick with the receiver logger instance
 
 	r.log.Debugf("Processing message %d id %s", count, msg.MessageID)
-	disp, ctx, err := r.handleReceivedMessageWithTracingContext(ctx, msg, handler)
+	disp, ctx, err := r.handleReceivedMessageWithTracingContext(ctx, r.log, msg, handler)
 	r.dispose(ctx, disp, err, msg)
 
 	duration := time.Since(now)

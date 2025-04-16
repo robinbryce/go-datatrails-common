@@ -7,6 +7,8 @@ type ReaderOptions struct {
 	accountName string
 
 	container string
+
+	startSpanFromContext startSpanFromContextFunc
 }
 
 type ReaderOption func(*ReaderOptions)
@@ -22,6 +24,12 @@ func WithAccountName(accountName string) ReaderOption {
 func WithContainer(container string) ReaderOption {
 	return func(a *ReaderOptions) {
 		a.container = container
+	}
+}
+
+func WithReaderSpanFromContext(s startSpanFromContextFunc) ReaderOption {
+	return func(a *ReaderOptions) {
+		a.startSpanFromContext = s
 	}
 }
 

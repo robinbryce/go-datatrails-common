@@ -17,8 +17,6 @@ import (
 
 	azStorageBlob "github.com/Azure/azure-sdk-for-go/sdk/storage/azblob"
 	mimetype "github.com/gabriel-vasile/mimetype"
-
-	"github.com/datatrails/go-datatrails-common/logger"
 )
 
 var (
@@ -30,7 +28,7 @@ const (
 )
 
 func (azp *Storer) checkContainer(ctx context.Context) error {
-	logger.Sugar.Debugf("Checking container URL %s", azp.containerURL)
+	azp.log.Debugf("Checking container URL %s", azp.containerURL)
 	_, err := azp.containerClient.GetProperties(ctx, nil)
 	if err != nil {
 		return ErrorFromError(err)
@@ -44,7 +42,7 @@ func (azp *Storer) setMetadata(
 	identity string,
 	metadata map[string]string,
 ) error {
-	logger.Sugar.Debugf("setMetadata BlockBlob %s: %v", identity, metadata)
+	azp.log.Debugf("setMetadata BlockBlob %s: %v", identity, metadata)
 
 	blobClient, err := azp.containerClient.NewBlobClient(identity)
 	if err != nil {
@@ -63,7 +61,7 @@ func (azp *Storer) setTags(
 	identity string,
 	tags map[string]string,
 ) error {
-	logger.Sugar.Debugf("setTags BlockBlob %s: %v", identity, tags)
+	azp.log.Debugf("setTags BlockBlob %s: %v", identity, tags)
 
 	blobClient, err := azp.containerClient.NewBlobClient(identity)
 	if err != nil {
@@ -88,11 +86,12 @@ func (azp *Storer) Write(
 	source io.Reader,
 	opts ...Option,
 ) (*WriteResponse, error) {
+	azp.log.Debugf("Write BlockBlob %s", identity)
+
 	err := azp.checkContainer(ctx)
 	if err != nil {
 		return nil, err
 	}
-	logger.Sugar.Debugf("Create BlockBlob %s", identity)
 
 	options := &StorerOptions{}
 	for _, opt := range opts {
@@ -131,11 +130,11 @@ func (azp *Storer) WriteStream(
 	source *http.Request,
 	opts ...Option,
 ) (*WriteResponse, error) {
+
 	err := azp.checkContainer(ctx)
 	if err != nil {
 		return nil, err
 	}
-	logger.Sugar.Debugf("Create BlockBlob %s", identity)
 
 	options := &StorerOptions{}
 	for _, opt := range opts {
@@ -151,10 +150,10 @@ func (azp *Storer) writeStream(
 	reader io.Reader,
 	leaseID string,
 ) (*WriteResponse, error) {
-	logger.Sugar.Debugf("write %s", identity)
+
 	blockBlobClient, err := azp.containerClient.NewBlockBlobClient(identity)
 	if err != nil {
-		logger.Sugar.Infof("Cannot get block blob client blob: %v", err)
+		azp.log.Infof("Cannot get block blob client blob: %v", err)
 		return nil, ErrorFromError(err)
 	}
 	blobAccessConditions := azStorageBlob.BlobAccessConditions{
@@ -178,7 +177,7 @@ func (azp *Storer) writeStream(
 		},
 	)
 	if err != nil {
-		logger.Sugar.Infof("Cannot upload blob: %v", err)
+		azp.log.Infof("Cannot upload blob: %v", err)
 		return nil, ErrorFromError(err)
 
 	}
@@ -192,11 +191,11 @@ func (azp *Storer) streamReader(
 	options *StorerOptions,
 ) (*WriteResponse, error) {
 
-	logger.Sugar.Debugf("streamReader: %v", r)
+	azp.log.Debugf("streamReader: %v", r)
 	var err error
 
 	if r.ContentLength < 1 {
-		logger.Sugar.Errorf("No content to be uploaded")
+		azp.log.Infof("No content to be uploaded")
 		return nil, NewStatusError(fmt.Sprintf("no content to be uploaded"), http.StatusBadRequest)
 	}
 	// get the multipart reader
@@ -204,7 +203,7 @@ func (azp *Storer) streamReader(
 	// "request Content-Type isn't multipart/form-data"
 	reader, err := r.MultipartReader()
 	if err != nil {
-		logger.Sugar.Errorf("failed to get multipart reader: %v", err)
+		azp.log.Infof("failed to get multipart reader: %v", err)
 		return nil, NewStatusError(fmt.Sprintf("failed to get multipart reader: %v", err), http.StatusBadRequest)
 	}
 
@@ -217,7 +216,7 @@ func (azp *Storer) streamReader(
 		part, err := reader.NextPart()
 		if err == io.EOF { //nolint https://github.com/golang/go/issues/39155
 			// we've got all of it just exit
-			logger.Sugar.Debugf("got complete file")
+			azp.log.Debugf("got complete file")
 			break
 		}
 
@@ -227,11 +226,11 @@ func (azp *Storer) streamReader(
 		}
 
 		defer part.Close()
-		logger.Sugar.Debugf("uploading %s", part.FileName())
+		azp.log.Debugf("uploading %s", part.FileName())
 
 		if numFiles > 1 {
 			// we got multiple files - bad request
-			logger.Sugar.Infof("only one file expected")
+			azp.log.Infof("only one file expected")
 			return nil, NewStatusError("only one file expected", http.StatusBadRequest)
 		}
 
@@ -258,7 +257,7 @@ func (azp *Storer) streamReader(
 				return nil, copyErr
 			}
 
-			logger.Sugar.Infof("request file size: %d", count)
+			azp.log.Infof("request file size: %d", count)
 
 			if count >= options.sizeLimit {
 				return nil, NewStatusError("filesize exceeds maximum", http.StatusPaymentRequired)
@@ -287,7 +286,7 @@ func (azp *Storer) streamReader(
 			// catenate the header and remaining data to make it look like a new reader
 			uploadData.part = io.MultiReader(header, uploadData.part)
 		}
-		logger.Sugar.Debugf("Mime type is: %s", mimeType)
+		azp.log.Debugf("Mime type is: %s", mimeType)
 
 		// prepare blob
 		resp, err = azp.writeStream(ctx, identity, uploadData, options.leaseID)

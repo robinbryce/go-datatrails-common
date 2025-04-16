@@ -85,6 +85,7 @@ func NewDev(cfg DevConfig, container string) (*Storer, error) {
 		Container:     container,
 		credential:    cred,
 		rootURL:       cfg.URL,
+		log:           logger.Sugar,
 	}
 
 	azp.containerURL = fmt.Sprintf(

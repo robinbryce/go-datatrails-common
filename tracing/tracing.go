@@ -11,6 +11,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/datatrails/go-datatrails-common/logger"
+
 	otnethttp "github.com/opentracing-contrib/go-stdlib/nethttp"
 	opentracing "github.com/opentracing/opentracing-go"
 	opentracinglog "github.com/opentracing/opentracing-go/log"
@@ -42,29 +44,16 @@ var otHeaders = []string{
 	flags,
 }
 
-func valueFromCarrier(carrier opentracing.TextMapCarrier, key string) string {
-	value, found := carrier[key]
-	if !found || value == "" {
-		return ""
-	}
-	return value
-}
-
-func TraceIDFromContext(ctx context.Context) string {
+func SetSpanField(ctx context.Context, key string, value string) {
 	span := opentracing.SpanFromContext(ctx)
-	if span == nil {
-		return ""
+	if span != nil {
+		span.LogFields(
+			opentracinglog.String(key, value),
+		)
 	}
-	carrier := opentracing.TextMapCarrier{}
-	err := opentracing.GlobalTracer().Inject(span.Context(), opentracing.TextMap, carrier)
-	if err != nil {
-		return ""
-	}
-
-	return valueFromCarrier(carrier, TraceID)
 }
 
-func SetSpanHTTPHeader(span opentracing.Span, log Logger, r *http.Request) {
+func SetSpanHTTPHeader(span opentracing.Span, log logger.Logger, r *http.Request) {
 	// Transmit the span's TraceContext as HTTP headers on our request
 	if span != nil {
 		err := opentracing.GlobalTracer().Inject(
@@ -76,29 +65,6 @@ func SetSpanHTTPHeader(span opentracing.Span, log Logger, r *http.Request) {
 			log.Infof("Tracer.Inject %v", err)
 		}
 	}
-}
-
-func SetSpanField(ctx context.Context, key string, value string) {
-	span := opentracing.SpanFromContext(ctx)
-	if span != nil {
-		span.LogFields(
-			opentracinglog.String(key, value),
-		)
-	}
-}
-
-func NewSpanContext(ctx context.Context, operationName string) (opentracing.Span, context.Context) {
-	span := opentracing.StartSpan(operationName)
-	if span == nil {
-		return nil, ctx
-	}
-	ctx = opentracing.ContextWithSpan(ctx, span)
-	return span, ctx
-}
-
-// StartSpanFromContext is a simple wrapper that removes the requirement to import "github.com/opentracing/opentracing-go" in business code.
-func StartSpanFromContext(ctx context.Context, name string, options ...opentracing.StartSpanOption) (opentracing.Span, context.Context) {
-	return opentracing.StartSpanFromContext(ctx, name, options...)
 }
 
 func HTTPMiddleware(h http.Handler) http.Handler {
@@ -141,7 +107,9 @@ func trimPodName(p string) string {
 	return p
 }
 
-func NewTracer(log Logger, portName string) io.Closer {
+// NewTracer and the following methods are only called once to create the global tracer
+// in startup/run.go
+func NewTracer(log logger.Logger, portName string) io.Closer {
 	instanceName, _, _ := strings.Cut(getOrFatal("POD_NAME"), " ")
 	nameSpace := getOrFatal("POD_NAMESPACE")
 	containerName := getOrFatal("CONTAINER_NAME")
@@ -154,7 +122,7 @@ func NewTracer(log Logger, portName string) io.Closer {
 // configured.  If the necessary configuration is not available it is Fatal
 // unless disableVar is set and is truthy (strconf.ParseBool -> true). If
 // tracing is disabled returns nil
-func NewFromEnv(log Logger, service string, host string, endpointVar, disableVar string) io.Closer {
+func NewFromEnv(log logger.Logger, service string, host string, endpointVar, disableVar string) io.Closer {
 	ze, ok := os.LookupEnv(endpointVar)
 	if !ok {
 		if disabled := getTruthyOrFatal(disableVar); !disabled {
@@ -176,7 +144,7 @@ func NewFromEnv(log Logger, service string, host string, endpointVar, disableVar
 
 // New initialises tracing
 // uses zipkin client tracer
-func New(log Logger, service string, host string, zipkinEndpoint string) io.Closer {
+func New(log logger.Logger, service string, host string, zipkinEndpoint string) io.Closer {
 	// create our local service endpoint
 	localEndpoint, err := zipkin.NewEndpoint(service, host)
 	if err != nil {

@@ -68,8 +68,8 @@ func (kv *KeyVault) GetLatestKey(
 		return keyvault.KeyBundle{}, err
 	}
 
-	span, ctx := tracing.StartSpanFromContext(ctx, "KeyVault GetKey")
-	defer span.Finish()
+	span, ctx := tracing.StartSpanFromContext(ctx, logger.Sugar, "KeyVault GetKey")
+	defer span.Close()
 
 	key, err := kvClient.GetKey(ctx, kv.url, keyName, "")
 	if err != nil {
@@ -94,8 +94,8 @@ func (kv *KeyVault) GetKeyVersionsKeys(
 		return []keyvault.KeyBundle{}, err
 	}
 
-	span, ctx := tracing.StartSpanFromContext(ctx, "KeyVault GetKeyVersions")
-	defer span.Finish()
+	span, ctx := tracing.StartSpanFromContext(ctx, logger.Sugar, "KeyVault GetKeyVersions")
+	defer span.Close()
 
 	pageLimit := int32(1)
 	keyVersions, err := kvClient.GetKeyVersions(ctx, kv.url, keyID, &pageLimit)
@@ -103,7 +103,7 @@ func (kv *KeyVault) GetKeyVersionsKeys(
 		return []keyvault.KeyBundle{}, fmt.Errorf("failed to read key: %w", err)
 	}
 
-	span.Finish()
+	span.Close()
 
 	keyVersionValues := keyVersions.Values()
 
@@ -200,8 +200,8 @@ func (kv *KeyVault) Sign(
 	keyName := GetKeyName(keyID)
 	keyVersion := GetKeyVersion(keyID)
 
-	span, ctx := tracing.StartSpanFromContext(ctx, "KeyVault Sign")
-	defer span.Finish()
+	span, ctx := tracing.StartSpanFromContext(ctx, logger.Sugar, "KeyVault Sign")
+	defer span.Close()
 
 	signatureb64, err := kvClient.Sign(ctx, kv.url, keyName, keyVersion, params)
 	if err != nil {
@@ -283,8 +283,8 @@ func (kv *KeyVault) Verify(
 		Digest:    &digestStr,
 	}
 
-	span, ctx := tracing.StartSpanFromContext(ctx, "KeyVault Verify")
-	defer span.Finish()
+	span, ctx := tracing.StartSpanFromContext(ctx, logger.Sugar, "KeyVault Verify")
+	defer span.Close()
 
 	result, err := kvClient.Verify(ctx, kv.url, keyID, keyVersion, params)
 	if err != nil {

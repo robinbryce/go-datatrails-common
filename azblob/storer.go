@@ -7,7 +7,6 @@ import (
 	"fmt"
 
 	azStorageBlob "github.com/Azure/azure-sdk-for-go/sdk/storage/azblob"
-	"github.com/datatrails/go-datatrails-common/logger"
 )
 
 var (
@@ -34,6 +33,8 @@ type Storer struct {
 
 	log                          Logger
 	setReadResponseScannedStatus ReadResponseScannedStatus
+
+	startSpanFromContext startSpanFromContextFunc
 }
 
 type StorerOption func(*Storer)
@@ -44,8 +45,15 @@ func WithSetScannedStatus(s ReadResponseScannedStatus) StorerOption {
 	}
 }
 
+func WithStorerSpanFromContext(s startSpanFromContextFunc) StorerOption {
+	return func(a *Storer) {
+		a.startSpanFromContext = s
+	}
+}
+
 // New returns new az blob read/write object
 func New(
+	log Logger,
 	accountName string,
 	resourceGroup string,
 	subscription string,
@@ -54,7 +62,7 @@ func New(
 ) (*Storer, error) {
 
 	var err error
-	logger.Sugar.Debugf("New Storer: %s/%s/%s/%s",
+	log.Debugf("New Storer: %s/%s/%s/%s",
 		accountName,
 		resourceGroup,
 		subscription,
@@ -72,7 +80,7 @@ func New(
 	rootURL := secret.URL
 
 	if container == "" {
-		logger.Sugar.Infof("Storer: %v", ErrUnspecifiedContainer)
+		log.Infof("Storer: %v", ErrUnspecifiedContainer)
 		return nil, ErrUnspecifiedContainer
 	}
 	azp := Storer{
@@ -82,6 +90,7 @@ func New(
 		Container:     container,
 		credential:    credential,
 		rootURL:       rootURL,
+		log:           log,
 	}
 	for _, option := range options {
 		option(&azp)
@@ -98,12 +107,12 @@ func New(
 		nil,
 	)
 	if err != nil {
-		logger.Sugar.Infof("unable to create serviceclient %s: %v", azp.containerURL, err)
+		log.Infof("unable to create serviceclient %s: %v", azp.containerURL, err)
 		return nil, err
 	}
 	azp.containerClient, err = azp.serviceClient.NewContainerClient(container)
 	if err != nil {
-		logger.Sugar.Infof("unable to create containerclient %s: %v", container, err)
+		log.Infof("unable to create containerclient %s: %v", container, err)
 		return nil, err
 	}
 

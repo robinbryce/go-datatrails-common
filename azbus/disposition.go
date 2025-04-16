@@ -77,8 +77,8 @@ func (r *BatchReceiver) Dispose(ctx context.Context, d Disposition, err error, m
 func abandon(ctx context.Context, log logger.Logger, r *azservicebus.Receiver, err error, msg *ReceivedMessage) {
 	ctx = context.WithoutCancel(ctx)
 
-	span, ctx := tracing.StartSpanFromContext(ctx, "Message.Abandon")
-	defer span.Finish()
+	span, ctx := tracing.StartSpanFromContext(ctx, log, "Message.Abandon")
+	defer span.Close()
 	log.Infof("Abandon Message on DeliveryCount %d: %v", msg.DeliveryCount, err)
 	err1 := r.AbandonMessage(ctx, msg, nil)
 	if err1 != nil {
@@ -91,8 +91,8 @@ func abandon(ctx context.Context, log logger.Logger, r *azservicebus.Receiver, e
 func deadLetter(ctx context.Context, log logger.Logger, r *azservicebus.Receiver, err error, msg *ReceivedMessage) {
 	ctx = context.WithoutCancel(ctx)
 
-	span, ctx := tracing.StartSpanFromContext(ctx, "Message.DeadLetter")
-	defer span.Finish()
+	span, ctx := tracing.StartSpanFromContext(ctx, log, "Message.DeadLetter")
+	defer span.Close()
 	log.Infof("DeadLetter Message: %v", err)
 	options := azservicebus.DeadLetterOptions{
 		Reason: to.Ptr(strings.ToValidUTF8(err.Error(), "!!!")),
@@ -107,8 +107,8 @@ func deadLetter(ctx context.Context, log logger.Logger, r *azservicebus.Receiver
 func complete(ctx context.Context, log logger.Logger, r *azservicebus.Receiver, err error, msg *ReceivedMessage) {
 	ctx = context.WithoutCancel(ctx)
 
-	span, _ := tracing.StartSpanFromContext(ctx, "Message.Complete")
-	defer span.Finish()
+	span, _ := tracing.StartSpanFromContext(ctx, log, "Message.Complete")
+	defer span.Close()
 
 	if err != nil {
 		log.Infof("Complete Message %v", err)
@@ -133,8 +133,8 @@ func complete(ctx context.Context, log logger.Logger, r *azservicebus.Receiver, 
 func reschedule(ctx context.Context, log logger.Logger, r *azservicebus.Receiver, err error, msg *ReceivedMessage) {
 	ctx = context.WithoutCancel(ctx)
 
-	span, _ := tracing.StartSpanFromContext(ctx, "Message.Reschedule")
-	defer span.Finish()
+	span, _ := tracing.StartSpanFromContext(ctx, log, "Message.Reschedule")
+	defer span.Close()
 	log.Infof("Reschedule Message on DeliveryCount %d: %v", msg.DeliveryCount, err)
 }
 

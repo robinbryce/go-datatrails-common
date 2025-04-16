@@ -44,7 +44,7 @@ type Reader interface {
 // example:
 //
 //	url: https://app.datatrails.ai/verifiabledata
-func NewReaderNoAuth(url string, opts ...ReaderOption) (Reader, error) {
+func NewReaderNoAuth(log Logger, url string, opts ...ReaderOption) (Reader, error) {
 	var err error
 	if url == "" {
 		return nil, errors.New("url is a required parameter and cannot be empty")
@@ -53,12 +53,14 @@ func NewReaderNoAuth(url string, opts ...ReaderOption) (Reader, error) {
 	readerOptions := ParseReaderOptions(opts...)
 
 	azp := &Storer{
-		AccountName:   readerOptions.accountName, // just for logging
-		ResourceGroup: "",                        // just for logging
-		Subscription:  "",                        // just for logging
-		Container:     readerOptions.container,
-		credential:    nil,
-		rootURL:       url,
+		AccountName:          readerOptions.accountName, // just for logging
+		ResourceGroup:        "",                        // just for logging
+		Subscription:         "",                        // just for logging
+		Container:            readerOptions.container,
+		credential:           nil,
+		rootURL:              url,
+		startSpanFromContext: readerOptions.startSpanFromContext,
+		log:                  log,
 	}
 
 	azp.serviceClient, err = azStorageBlob.NewServiceClientWithNoCredential(
@@ -93,7 +95,7 @@ func NewReaderNoAuth(url string, opts ...ReaderOption) (Reader, error) {
 
 // NewReaderDefaultAuth is a azure blob reader client that obtains credentials from the
 // environment - including aad pod identity / workload identity.
-func NewReaderDefaultAuth(url string, opts ...ReaderOption) (Reader, error) {
+func NewReaderDefaultAuth(log Logger, url string, opts ...ReaderOption) (Reader, error) {
 	var err error
 	if url == "" {
 		return nil, errors.New("url is a required parameter and cannot be empty")
@@ -102,12 +104,14 @@ func NewReaderDefaultAuth(url string, opts ...ReaderOption) (Reader, error) {
 	readerOptions := ParseReaderOptions(opts...)
 
 	azp := &Storer{
-		AccountName:   readerOptions.accountName, // just for logging
-		ResourceGroup: "",                        // just for logging
-		Subscription:  "",                        // just for logging
-		Container:     readerOptions.container,
-		credential:    nil,
-		rootURL:       url,
+		AccountName:          readerOptions.accountName, // just for logging
+		ResourceGroup:        "",                        // just for logging
+		Subscription:         "",                        // just for logging
+		Container:            readerOptions.container,
+		credential:           nil,
+		rootURL:              url,
+		startSpanFromContext: readerOptions.startSpanFromContext,
+		log:                  log,
 	}
 
 	credentials, err := azidentity.NewDefaultAzureCredential(nil)

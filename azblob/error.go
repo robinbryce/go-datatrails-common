@@ -49,14 +49,14 @@ func (e *Error) StatusCode() int {
 		if resp.Body != nil {
 			defer resp.Body.Close()
 		}
-		logger.Sugar.Debugf("Azblob StatusCode %d", resp.StatusCode)
+		logger.Sugar.Debugf("AZBlob downstream statusCode %d", resp.StatusCode)
 		return resp.StatusCode
 	}
 	if e.statusCode != 0 {
-		logger.Sugar.Debugf("Return statusCode %d", e.statusCode)
+		logger.Sugar.Debugf("AZBlob internal statusCode %d", e.statusCode)
 		return e.statusCode
 	}
-	logger.Sugar.Debugf("Return InternalServerError")
+	logger.Sugar.Debugf("AZBlob InternalServerError: %v", e)
 	return http.StatusInternalServerError
 }
 
