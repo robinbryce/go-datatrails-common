@@ -6,8 +6,7 @@ updates:
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
-      # Check for updates managed by Composer once a week
       interval: "weekly"
       day: "tuesday"
-      time: "03:00"
+      time: "03:04"
       timezone: "Europe/London"

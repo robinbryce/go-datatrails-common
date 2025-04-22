@@ -69,6 +69,11 @@ tasks:
     cmds:
       - task: codeqa:lint
 
+  vulncheck:
+    desc: run the vulnchecker
+    cmds:
+      - task: codeqa:vulncheck
+
   go:modules:
     desc: ensure that go.mod is up to date
     cmds:
