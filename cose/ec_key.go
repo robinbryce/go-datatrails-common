@@ -24,8 +24,7 @@ type ECCoseKey struct {
 }
 
 // NewECCoseKey creates a new EC Cose Key
-func NewECCoseKey(coseKey map[int64]interface{}) (*ECCoseKey, error) {
-
+func NewECCoseKey(coseKey map[int64]any) (*ECCoseKey, error) {
 	coseCommonKey, err := NewCoseCommonKey(coseKey)
 	if err != nil {
 		logger.Sugar.Infof("NewECCoseKey: failed to get the common fields %v", err)
@@ -76,7 +75,6 @@ func NewECCoseKey(coseKey map[int64]interface{}) (*ECCoseKey, error) {
 //
 //	ECCoseKey
 func (ecck *ECCoseKey) PublicKey() (crypto.PublicKey, error) {
-
 	publicKey := ecdsa.PublicKey{}
 
 	// first find the curve

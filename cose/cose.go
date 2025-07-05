@@ -1,3 +1,4 @@
+// Package cose implements opinionated key types and ergonomics for veraisong/go-cose
 package cose
 
 import (
@@ -48,7 +49,6 @@ func newDefaultSignOptions() SignOptions {
 
 // NewCoseSign1Message creates a new cose sign1 message
 func NewCoseSign1Message(message *cose.Sign1Message, withOpts ...SignOption) (*CoseSign1Message, error) {
-
 	opts := newDefaultSignOptions()
 
 	for _, o := range withOpts {
@@ -74,9 +74,8 @@ func NewCoseSign1Message(message *cose.Sign1Message, withOpts ...SignOption) (*C
 	return &csm, nil
 }
 
-// NewCoseSign1Message creates a new cose sign1 message from a cbor encoded message
+// NewCoseSign1MessageFromCBOR creates a new cose sign1 message from a cbor encoded message
 func NewCoseSign1MessageFromCBOR(message []byte, withOpts ...SignOption) (*CoseSign1Message, error) {
-
 	opts := newDefaultSignOptions()
 
 	for _, o := range withOpts {
@@ -108,7 +107,6 @@ func NewCoseSign1MessageFromCBOR(message []byte, withOpts ...SignOption) (*CoseS
 
 // MarshalCBOR marshals a cose_Sign1 message to cbor
 func MarshalCBOR(message *cose.Sign1Message) ([]byte, error) {
-
 	marshaledMessage, err := message.MarshalCBOR()
 	if err != nil {
 		return nil, err
@@ -119,7 +117,6 @@ func MarshalCBOR(message *cose.Sign1Message) ([]byte, error) {
 
 // UnmarshalCBOR unmarshals a cbor encoded cose_Sign1 message
 func UnmarshalCBOR(message []byte) (*cose.Sign1Message, error) {
-
 	var unmarshaledMessage cose.Sign1Message
 	err := unmarshaledMessage.UnmarshalCBOR(message)
 	if err != nil {
@@ -131,7 +128,6 @@ func UnmarshalCBOR(message []byte) (*cose.Sign1Message, error) {
 
 // valueFromProtectedHeader gets a value from the cose_Sign1 protected Header given the label
 func (cs *CoseSign1Message) valueFromProtectedHeader(label int64) (any, error) {
-
 	header := cs.Headers.Protected
 
 	value, ok := header[label]
@@ -145,7 +141,6 @@ func (cs *CoseSign1Message) valueFromProtectedHeader(label int64) (any, error) {
 
 // ContentTypeFromProtectedheader gets the content type from the given protected header
 func (cs *CoseSign1Message) ContentTypeFromProtectedheader() (string, error) {
-
 	contentType, err := cs.valueFromProtectedHeader(cose.HeaderLabelContentType)
 	if err != nil {
 		logger.Sugar.Infof("ContentTypeFromProtectedheader: failed to get content type from protected header: %v", err)
@@ -165,7 +160,6 @@ func (cs *CoseSign1Message) ContentTypeFromProtectedheader() (string, error) {
 //
 //	to use to acquire the public key for verifying
 func (cs *CoseSign1Message) DidFromProtectedHeader() (string, error) {
-
 	did, err := cs.valueFromProtectedHeader(HeaderLabelDID)
 	if err != nil {
 		logger.Sugar.Infof("DidFromProtectedHeader: failed to get did from protected header: %v", err)
@@ -183,17 +177,16 @@ func (cs *CoseSign1Message) DidFromProtectedHeader() (string, error) {
 
 // CWTClaimsFromProtectedHeader gets the CWT Claims from the protected header
 func (cs *CoseSign1Message) CWTClaimsFromProtectedHeader() (*CWTClaims, error) {
-
 	cwtClaimsRaw, err := cs.valueFromProtectedHeader(HeaderLabelCWTClaims)
 	if err != nil {
 		logger.Sugar.Infof("CWTClaimsFromProtectedHeader: failed to get cwt claims from protected header: %v", err)
 		return nil, err
 	}
 
-	cwtClaimsMap, ok := cwtClaimsRaw.(map[interface{}]interface{})
+	cwtClaimsMap, ok := cwtClaimsRaw.(map[any]any)
 	if !ok {
 		logger.Sugar.Infof("CWTClaimsFromProtectedHeader: cwt claims from protected header is not map: %v", err)
-		return nil, &ErrUnexpectedProtectedHeaderType{label: HeaderLabelCWTClaims, expectedType: "map[interface{}]interface{}", actualType: reflect.TypeOf(cwtClaimsMap).String()}
+		return nil, &ErrUnexpectedProtectedHeaderType{label: HeaderLabelCWTClaims, expectedType: "map[any]any", actualType: reflect.TypeOf(cwtClaimsMap).String()}
 	}
 
 	issuer, ok := cwtClaimsMap[int64(cwt.KeyIss)]
@@ -231,9 +224,7 @@ func (cs *CoseSign1Message) CWTClaimsFromProtectedHeader() (*CWTClaims, error) {
 
 	// find verification key
 	verificationKey, err := CNFCoseKey(cwtClaimsMap)
-
 	if err != nil {
-
 		// cnf is an optional field, so if we don't have one, log but don't error out
 		if errors.Is(err, ErrCWTClaimsNoCNF) {
 			logger.Sugar.Infof("CWTClaimsFromProtectedHeader: failed to get cnf field: %v", err)
@@ -253,7 +244,6 @@ func (cs *CoseSign1Message) CWTClaimsFromProtectedHeader() (*CWTClaims, error) {
 
 // FeedFromProtectedHeader gets the feed id from the protected header
 func (cs *CoseSign1Message) FeedFromProtectedHeader() (string, error) {
-
 	feed, err := cs.valueFromProtectedHeader(HeaderLabelFeed)
 	if err != nil {
 		logger.Sugar.Infof("feedFromProtectedHeader: failed to get feed from protected header: %v", err)
@@ -271,7 +261,6 @@ func (cs *CoseSign1Message) FeedFromProtectedHeader() (string, error) {
 
 // KidFromProtectedHeader gets the  kid from the protected header
 func (cs *CoseSign1Message) KidFromProtectedHeader() (string, error) {
-
 	kid, err := cs.valueFromProtectedHeader(cose.HeaderLabelKeyID)
 	if err != nil {
 		logger.Sugar.Infof("kidFromProtectedHeader: failed to get kid from protected header: %v", err)
@@ -292,8 +281,8 @@ type publicKeyProvider interface {
 }
 
 func (cs *CoseSign1Message) VerifyWithProvider(
-	pubKeyProvider publicKeyProvider, external []byte) error {
-
+	pubKeyProvider publicKeyProvider, external []byte,
+) error {
 	publicKey, algorithm, err := pubKeyProvider.PublicKey()
 	if err != nil {
 		return err
@@ -341,7 +330,6 @@ func (cs *CoseSign1Message) VerifyWithProvider(
 //
 // NOTE: that iss needs to be set, as the user needs to trace the given public key back to an issuer.
 func (cs *CoseSign1Message) VerifyWithCWTPublicKey(external []byte) error {
-
 	return cs.VerifyWithProvider(NewCWTPublicKeyProvider(cs), external)
 }
 
