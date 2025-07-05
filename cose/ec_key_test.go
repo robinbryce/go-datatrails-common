@@ -25,12 +25,11 @@ import (
 // 10. A cose key with unknown keytype, error
 // 11. A cose key with unknown curve, error
 func TestNewECCoseKey(t *testing.T) {
-
 	logger.New(("NOOP"))
 	defer logger.OnExit()
 
 	type args struct {
-		coseKey map[int64]interface{}
+		coseKey map[int64]any
 	}
 	tests := []struct {
 		name     string
@@ -41,7 +40,7 @@ func TestNewECCoseKey(t *testing.T) {
 		{
 			name: "positive",
 			args: args{
-				coseKey: map[int64]interface{}{
+				coseKey: map[int64]any{
 					/*keytype*/ 1:/*EC2*/ int64(2),
 					/*curve*/ -1:/*P-256*/ int64(1),
 					/*x*/ -2: []byte("\xb3\xa0\xc4\xfa\xa7L\x01@\xc1\xcf\xcaR`s\\\x9bc\x19\xe7\x05C\x15{\xed\xab\xbc\xae0\xfa\xec}\x03"),
@@ -61,7 +60,7 @@ func TestNewECCoseKey(t *testing.T) {
 		{
 			name: "missing keytype",
 			args: args{
-				coseKey: map[int64]interface{}{
+				coseKey: map[int64]any{
 					/*curve*/ -1:/*P-256*/ int64(1),
 					/*x*/ -2: []byte("\xb3\xa0\xc4\xfa\xa7L\x01@\xc1\xcf\xcaR`s\\\x9bc\x19\xe7\x05C\x15{\xed\xab\xbc\xae0\xfa\xec}\x03"),
 					/*y*/ -3: []byte(",\x89\xce\xb8\xf0J\xbbg\xac\x15\x12\xe4-\x12-U\x9d\xc8\xcb\x9cc;1\xd5\xe0 \x13\xbcmBT`"),
@@ -73,7 +72,7 @@ func TestNewECCoseKey(t *testing.T) {
 		{
 			name: "missing curve",
 			args: args{
-				coseKey: map[int64]interface{}{
+				coseKey: map[int64]any{
 					/*keytype*/ 1:/*EC2*/ int64(2),
 					/*x*/ -2: []byte("\xb3\xa0\xc4\xfa\xa7L\x01@\xc1\xcf\xcaR`s\\\x9bc\x19\xe7\x05C\x15{\xed\xab\xbc\xae0\xfa\xec}\x03"),
 					/*y*/ -3: []byte(",\x89\xce\xb8\xf0J\xbbg\xac\x15\x12\xe4-\x12-U\x9d\xc8\xcb\x9cc;1\xd5\xe0 \x13\xbcmBT`"),
@@ -85,7 +84,7 @@ func TestNewECCoseKey(t *testing.T) {
 		{
 			name: "missing x",
 			args: args{
-				coseKey: map[int64]interface{}{
+				coseKey: map[int64]any{
 					/*keytype*/ 1:/*EC2*/ int64(2),
 					/*curve*/ -1:/*P-256*/ int64(1),
 					/*y*/ -3: []byte(",\x89\xce\xb8\xf0J\xbbg\xac\x15\x12\xe4-\x12-U\x9d\xc8\xcb\x9cc;1\xd5\xe0 \x13\xbcmBT`"),
@@ -97,7 +96,7 @@ func TestNewECCoseKey(t *testing.T) {
 		{
 			name: "missing y",
 			args: args{
-				coseKey: map[int64]interface{}{
+				coseKey: map[int64]any{
 					/*keytype*/ 1:/*EC2*/ int64(2),
 					/*curve*/ -1:/*P-256*/ int64(1),
 					/*x*/ -2: []byte("\xb3\xa0\xc4\xfa\xa7L\x01@\xc1\xcf\xcaR`s\\\x9bc\x19\xe7\x05C\x15{\xed\xab\xbc\xae0\xfa\xec}\x03"),
@@ -109,7 +108,7 @@ func TestNewECCoseKey(t *testing.T) {
 		{
 			name: "wrong format keytype",
 			args: args{
-				coseKey: map[int64]interface{}{
+				coseKey: map[int64]any{
 					/*keytype*/ 1:/*EC2*/ int(2), // whoops int instead of int64
 					/*curve*/ -1:/*P-256*/ int64(1),
 					/*x*/ -2: []byte("\xb3\xa0\xc4\xfa\xa7L\x01@\xc1\xcf\xcaR`s\\\x9bc\x19\xe7\x05C\x15{\xed\xab\xbc\xae0\xfa\xec}\x03"),
@@ -117,12 +116,12 @@ func TestNewECCoseKey(t *testing.T) {
 				},
 			},
 			expected: nil,
-			err:      &ErrKeyFormatError{field: "kty", expectedType: "[int64|string]", actualType: "int"},
+			err:      &ErrKeyFormatError{expectedType: "[uint64|int64|string]", actualType: "int"},
 		},
 		{
 			name: "wrong format curve",
 			args: args{
-				coseKey: map[int64]interface{}{
+				coseKey: map[int64]any{
 					/*keytype*/ 1:/*EC2*/ int64(2),
 					/*curve*/ -1:/*P-256*/ int(1), // whoops int instead of int64
 					/*x*/ -2: []byte("\xb3\xa0\xc4\xfa\xa7L\x01@\xc1\xcf\xcaR`s\\\x9bc\x19\xe7\x05C\x15{\xed\xab\xbc\xae0\xfa\xec}\x03"),
@@ -130,12 +129,12 @@ func TestNewECCoseKey(t *testing.T) {
 				},
 			},
 			expected: nil,
-			err:      &ErrKeyFormatError{field: "crv", expectedType: "[int64|string]", actualType: "int"},
+			err:      &ErrKeyFormatError{expectedType: "[uint64|int64|string]", actualType: "int"},
 		},
 		{
 			name: "wrong format x",
 			args: args{
-				coseKey: map[int64]interface{}{
+				coseKey: map[int64]any{
 					/*keytype*/ 1:/*EC2*/ int64(2),
 					/*curve*/ -1:/*P-256*/ int64(1),
 					/*x*/ -2: "\xb3\xa0\xc4\xfa\xa7L\x01@\xc1\xcf\xcaR`s\\\x9bc\x19\xe7\x05C\x15{\xed\xab\xbc\xae0\xfa\xec}\x03", // whoops str instead of []byte
@@ -148,7 +147,7 @@ func TestNewECCoseKey(t *testing.T) {
 		{
 			name: "wrong format x",
 			args: args{
-				coseKey: map[int64]interface{}{
+				coseKey: map[int64]any{
 					/*keytype*/ 1:/*EC2*/ int64(2),
 					/*curve*/ -1:/*P-256*/ int64(1),
 					/*x*/ -2: []byte("\xb3\xa0\xc4\xfa\xa7L\x01@\xc1\xcf\xcaR`s\\\x9bc\x19\xe7\x05C\x15{\xed\xab\xbc\xae0\xfa\xec}\x03"),
@@ -161,7 +160,7 @@ func TestNewECCoseKey(t *testing.T) {
 		{
 			name: "unknown keytype",
 			args: args{
-				coseKey: map[int64]interface{}{
+				coseKey: map[int64]any{
 					/*keytype*/ 1: int64(3252352),
 					/*curve*/ -1:/*P-256*/ int64(1),
 					/*x*/ -2: []byte("\xb3\xa0\xc4\xfa\xa7L\x01@\xc1\xcf\xcaR`s\\\x9bc\x19\xe7\x05C\x15{\xed\xab\xbc\xae0\xfa\xec}\x03"),
@@ -174,7 +173,7 @@ func TestNewECCoseKey(t *testing.T) {
 		{
 			name: "unknown curve",
 			args: args{
-				coseKey: map[int64]interface{}{
+				coseKey: map[int64]any{
 					/*keytype*/ 1:/*EC2*/ int64(2),
 					/*curve*/ -1: int64(32526262),
 					/*x*/ -2: []byte("\xb3\xa0\xc4\xfa\xa7L\x01@\xc1\xcf\xcaR`s\\\x9bc\x19\xe7\x05C\x15{\xed\xab\xbc\xae0\xfa\xec}\x03"),
@@ -202,7 +201,6 @@ func TestNewECCoseKey(t *testing.T) {
 // 3. a valid ec p-521 public key, returns a public key
 // 4. a ec public key with nonsense curve, error
 func TestECCoseKey_PublicKey(t *testing.T) {
-
 	logger.New(("NOOP"))
 	defer logger.OnExit()
 

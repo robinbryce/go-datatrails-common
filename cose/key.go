@@ -2,6 +2,7 @@ package cose
 
 import (
 	"crypto"
+	"fmt"
 	"reflect"
 
 	"github.com/datatrails/go-datatrails-common/logger"
@@ -35,7 +36,7 @@ const (
 	RSAQLabel = -5
 )
 
-// // CoseKey interface as defined in:
+// CoseKey interface as defined in:
 //
 //	https://www.rfc-editor.org/rfc/rfc8152.html#page-33
 //
@@ -49,7 +50,7 @@ type CoseKey interface {
 	PublicKey() (crypto.PublicKey, error)
 }
 
-// CoseKey as defined in:
+// CoseCommonKey as defined in:
 //
 //	https://www.rfc-editor.org/rfc/rfc8152.html#page-33
 //
@@ -77,9 +78,58 @@ type CoseCommonKey struct {
 	KeyOps []string `json:"key_ops,omitempty"`
 }
 
-// NewCoseCommonKey creates a new cose key with common fields
-func NewCoseCommonKey(coseKey map[int64]interface{}) (*CoseCommonKey, error) {
+func decodeInt64LabelOrString(label any) (int64, string, error) {
+	var s string
+	var i64 int64
+	var u64 uint64
 
+	s, ok := label.(string)
+	if ok {
+		return 0, s, nil
+	}
+	i64, ok = label.(int64)
+	if ok {
+		return i64, "", nil
+	}
+
+	u64, ok = label.(uint64)
+	if ok {
+		return int64(u64), "", nil
+	}
+	return 0, "", &ErrKeyFormatError{expectedType: "[uint64|int64|string]", actualType: reflect.TypeOf(label).String()}
+}
+
+func decodeInt64Label(label any) (int64, error) {
+	var i64 int64
+	var u64 uint64
+
+	i64, ok := label.(int64)
+	if ok {
+		return i64, nil
+	}
+
+	u64, ok = label.(uint64)
+	if ok {
+		return int64(u64), nil
+	}
+	return 0, &ErrKeyFormatError{expectedType: "[uint64|int64|string]", actualType: reflect.TypeOf(label).String()}
+}
+
+func decodeBytes(label any) ([]byte, error) {
+	b, ok := label.([]byte)
+	if ok {
+		return b, nil
+	}
+
+	s, ok := label.(string)
+	if ok {
+		return []byte(s), nil
+	}
+	return b, nil
+}
+
+// NewCoseCommonKey creates a new cose key with common fields
+func NewCoseCommonKey(coseKey map[int64]any) (*CoseCommonKey, error) {
 	keytype, err := KeyTypeLabelToKeyType(coseKey[KeyTypeLabel])
 	if err != nil {
 		logger.Sugar.Infof("NewCoseCommonKey: failed to find keytype: %v", err)
@@ -94,16 +144,9 @@ func NewCoseCommonKey(coseKey map[int64]interface{}) (*CoseCommonKey, error) {
 		algoritm = ""
 	}
 
-	// XXX: Type assertions to []byte were failing, hence this.
-	kid := coseKey[KeyIDLabel]
-	kidString, ok := kid.(string)
-	if !ok {
-		logger.Sugar.Infof("NewCoseCommonKey: failed to interpret KID as string: %v", kid)
-	}
-
-	kidBytes := []byte(kidString)
-	if len(kidBytes) == 0 {
-		kidBytes = nil
+	kid, err := decodeBytes(coseKey[KeyIDLabel])
+	if err != nil {
+		return nil, err
 	}
 
 	keyOps := coseKey[KeyOperationsLabel]
@@ -113,7 +156,7 @@ func NewCoseCommonKey(coseKey map[int64]interface{}) (*CoseCommonKey, error) {
 	coseCommonKey := CoseCommonKey{
 		Kty:    keytype,
 		Alg:    algoritm,
-		Kid:    kidBytes,
+		Kid:    kid,
 		KeyOps: keyOpsList,
 	}
 
@@ -145,27 +188,21 @@ func (cck *CoseCommonKey) KeyOperations() []string {
 //	to a string algorithm name.
 //
 // Mapping defined: https://www.rfc-editor.org/rfc/rfc8152.html#page-73
-func AlgorithmLabelToAlgorithm(label interface{}) (string, error) {
-
+func AlgorithmLabelToAlgorithm(label any) (string, error) {
 	if label == nil {
 		return "", &ErrKeyValueError{field: "alg", value: nil}
 	}
 
+	algi, algs, err := decodeInt64LabelOrString(label)
+	if err != nil {
+		return "", err
+	}
 	// first check if the label is already a string
-	algorithm, ok := label.(string)
-	if ok {
-		return algorithm, nil
+	if algs != "" {
+		return algs, nil
 	}
 
-	// if we get here we don't have a string, so only other allowed type for
-	//  algorithm is int64
-	algorithmInt64, ok := label.(int64)
-	if !ok {
-		logger.Sugar.Infof("AlgorithmLabelToAlgorithm: unknown type for algorithm, need int64 or string, but got: %v, type: %T", label, label)
-		return "", &ErrKeyFormatError{field: "alg", expectedType: "[int64|string]", actualType: reflect.TypeOf(label).String()}
-	}
-
-	switch algorithmInt64 {
+	switch algi {
 	case -7:
 		return "ES256", nil
 	case -35:
@@ -192,27 +229,22 @@ func AlgorithmLabelToAlgorithm(label interface{}) (string, error) {
 //	to a string curve name.
 //
 // Mapping defined: https://www.rfc-editor.org/rfc/rfc8152.html#page-73
-func CurveLabelToCurve(label interface{}) (string, error) {
-
+func CurveLabelToCurve(label any) (string, error) {
 	if label == nil {
 		return "", &ErrKeyValueError{field: "crv", value: nil}
 	}
 
+	curvi, curv, err := decodeInt64LabelOrString(label)
+	if err != nil {
+		return "", err
+	}
 	// first check if the label is already a string
-	curve, ok := label.(string)
-	if ok {
-		return curve, nil
+	if curv != "" {
+		return curv, nil
 	}
 
-	// if we get here we don't have a string, so only other allowed type for
-	//  curve is int64
-	curveInt64, ok := label.(int64)
-	if !ok {
-		logger.Sugar.Infof("CurveLabelToCurve: unknown type for curve, need int64 or string, but got: %v, type: %T", label, label)
-		return "", &ErrKeyFormatError{field: "crv", expectedType: "[int64|string]", actualType: reflect.TypeOf(label).String()}
-	}
-
-	switch curveInt64 {
+	// TODO: PyCose does not accept P-256, only P_256. Resolve which is correct.
+	switch curvi {
 	case 1:
 		return "P-256", nil
 	case 2:
@@ -237,27 +269,20 @@ func CurveLabelToCurve(label interface{}) (string, error) {
 //	to a string keytype name.
 //
 // Mapping defined: https://www.rfc-editor.org/rfc/rfc8152.html#page-73
-func KeyTypeLabelToKeyType(label interface{}) (string, error) {
-
+func KeyTypeLabelToKeyType(label any) (string, error) {
 	if label == nil {
 		return "", &ErrKeyValueError{field: "kty", value: nil}
 	}
 
-	// first check if the label is already a string
-	keytype, ok := label.(string)
-	if ok {
-		return keytype, nil
+	kti, kts, err := decodeInt64LabelOrString(label)
+	if err != nil {
+		return "", err
+	}
+	if kts != "" {
+		return kts, nil
 	}
 
-	// if we get here we don't have a string, so only other allowed type for
-	//  keytype is int64
-	keytypeInt64, ok := label.(int64)
-	if !ok {
-		logger.Sugar.Infof("KeyTypeLabelToKeyType: unknown type for keytype, need int64 or string, but got: %v, type: %T", label, label)
-		return "", &ErrKeyFormatError{field: "kty", expectedType: "[int64|string]", actualType: reflect.TypeOf(label).String()}
-	}
-
-	switch keytypeInt64 {
+	switch kti {
 	case 1:
 		return "OKP", nil
 	case 2:
@@ -272,16 +297,14 @@ func KeyTypeLabelToKeyType(label interface{}) (string, error) {
 }
 
 // convertKeysToLabels converts all keys in the map to int64 cose labels
-func convertKeysToLabels(coseKey map[interface{}]interface{}) (map[int64]interface{}, error) {
-
-	labelsMap := map[int64]interface{}{}
+func convertKeysToLabels(coseKey map[any]any) (map[int64]any, error) {
+	labelsMap := map[int64]any{}
 
 	for key, value := range coseKey {
 
-		label, ok := key.(int64)
-		if !ok {
-			logger.Sugar.Infof("convertKeysToLabels, label is not an int64: %v, type: %T", key, key)
-			return nil, ErrCWTClaimsCNFWrongFormat
+		label, err := decodeInt64Label(key)
+		if err != nil {
+			return nil, fmt.Errorf("%w: %v", ErrCWTClaimsCNFWrongFormat, err)
 		}
 
 		labelsMap[label] = value
