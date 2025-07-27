@@ -22,7 +22,8 @@ import (
  */
 
 const (
-	HeaderLabelCWTClaims              int64 = 13
+	HeaderLabelCWTClaimsDraft         int64 = 13
+	HeaderLabelCWTClaims              int64 = 15
 	HeaderLabelReceiptVersion         int64 = 390
 	HeaderLabelDID                    int64 = 391
 	HeaderLabelFeed                   int64 = 392
@@ -179,8 +180,16 @@ func (cs *CoseSign1Message) DidFromProtectedHeader() (string, error) {
 func (cs *CoseSign1Message) CWTClaimsFromProtectedHeader() (*CWTClaims, error) {
 	cwtClaimsRaw, err := cs.valueFromProtectedHeader(HeaderLabelCWTClaims)
 	if err != nil {
-		logger.Sugar.Infof("CWTClaimsFromProtectedHeader: failed to get cwt claims from protected header: %v", err)
-		return nil, err
+		err2, ok := err.(*ErrNoProtectedHeaderValue)
+		if !ok || err2.Label != HeaderLabelCWTClaims {
+			logger.Sugar.Infof("CWTClaimsFromProtectedHeader: failed to get cwt claims from protected header: %v", err)
+			return nil, err
+		}
+		cwtClaimsRaw, err = cs.valueFromProtectedHeader(HeaderLabelCWTClaimsDraft)
+		if err != nil {
+			logger.Sugar.Infof("CWTClaimsFromProtectedHeader: failed to get cwt claims from protected header: %v", err)
+			return nil, err
+		}
 	}
 
 	cwtClaimsMap, ok := cwtClaimsRaw.(map[any]any)
