@@ -7,7 +7,6 @@ import (
 	"net/http"
 
 	azStorageBlob "github.com/Azure/azure-sdk-for-go/sdk/storage/azblob"
-	"github.com/datatrails/go-datatrails-common/logger"
 )
 
 // HTTPError error type with info about http.StatusCode
@@ -49,14 +48,11 @@ func (e *Error) StatusCode() int {
 		if resp.Body != nil {
 			defer resp.Body.Close()
 		}
-		logger.Sugar.Debugf("AZBlob downstream statusCode %d", resp.StatusCode)
 		return resp.StatusCode
 	}
 	if e.statusCode != 0 {
-		logger.Sugar.Debugf("AZBlob internal statusCode %d", e.statusCode)
 		return e.statusCode
 	}
-	logger.Sugar.Debugf("AZBlob InternalServerError: %v", e)
 	return http.StatusInternalServerError
 }
 
